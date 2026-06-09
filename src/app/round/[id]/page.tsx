@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase, Round, RoundPlayer, Score, Hole, Course } from '@/lib/supabase'
 import {
@@ -78,6 +78,7 @@ function IndividualResultCard({ p1, p2, match, stroke, pi1, pi2 }: any) {
 
 export default function RoundPage() {
   const { id } = useParams<{ id: string }>()
+  const router = useRouter()
   const [round, setRound] = useState<Round | null>(null)
   const [players, setPlayers] = useState<RoundPlayer[]>([])
   const [scores, setScores] = useState<Score[]>([])
@@ -86,6 +87,7 @@ export default function RoundPage() {
   const [activeTab, setActiveTab] = useState<'card' | 'results'>('card')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -124,6 +126,13 @@ export default function RoundPage() {
     setSaving(null)
   }
 
+  const handleDelete = async () => {
+    if (!confirm('¿Eliminar esta partida? Esta acción no se puede deshacer.')) return
+    setDeleting(true)
+    await supabase.from('rounds').delete().eq('id', id)
+    router.push('/')
+  }
+
   if (loading) return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text3)' }}>Cargando…</div>
   )
@@ -158,6 +167,12 @@ export default function RoundPage() {
               </div>
             </div>
             {saving && <div style={{ marginLeft: 'auto', fontSize: 11, color: '#2dd4bf' }}>💾</div>}
+            <button onClick={handleDelete} disabled={deleting} style={{
+              marginLeft: 'auto', background: 'rgba(248,113,113,0.1)',
+              border: '1px solid rgba(248,113,113,0.2)', color: '#f87171',
+              borderRadius: 8, padding: '6px 12px', fontSize: 12,
+              cursor: 'pointer', flexShrink: 0
+            }}>🗑 Borrar</button>
           </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
             {players.map((p, i) => (

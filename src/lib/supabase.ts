@@ -29,12 +29,10 @@ export interface Round {
   mode: GameMode
   holes_played: number
   date: string
-  // Para modos combinados, config de handicap y modalidad
   dobles_mode?: 'stroke' | 'matchplay'
-  dobles_hcp_pct?: number       // 0, 80, 100
+  dobles_hcp_pct?: number
   individual_mode?: 'stroke' | 'matchplay'
-  individual_hcp_pct?: number   // 0, 80, 100
-  // Para combinado_bismarck
+  individual_hcp_pct?: number
   bismarck_hcp_pct?: number
   course?: Course
   players?: RoundPlayer[]
@@ -45,7 +43,7 @@ export interface RoundPlayer {
   round_id: string
   name: string
   handicap: number
-  team?: number   // 1 o 2 para dobles dentro de combinado_4
+  team?: number
   position: number
 }
 
@@ -55,4 +53,11 @@ export interface Score {
   player_id: string
   hole_number: number
   strokes: number | null
+}
+
+// Jugador registrado (lista maestra)
+export interface Player {
+  id: string
+  name: string
+  last_handicap: number
 }
