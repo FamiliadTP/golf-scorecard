@@ -5,7 +5,7 @@ const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
 export const supabase = createClient(supabaseUrl, supabaseKey)
 
-export type GameMode = 'stroke' | 'matchplay_individual' | 'matchplay_dobles' | 'bismarck'
+export type GameMode = 'stroke' | 'matchplay_individual' | 'matchplay_dobles' | 'bismarck' | 'combinado_4' | 'combinado_bismarck'
 
 export interface Course {
   id: string
@@ -29,6 +29,13 @@ export interface Round {
   mode: GameMode
   holes_played: number
   date: string
+  // Para modos combinados, config de handicap y modalidad
+  dobles_mode?: 'stroke' | 'matchplay'
+  dobles_hcp_pct?: number       // 0, 80, 100
+  individual_mode?: 'stroke' | 'matchplay'
+  individual_hcp_pct?: number   // 0, 80, 100
+  // Para combinado_bismarck
+  bismarck_hcp_pct?: number
   course?: Course
   players?: RoundPlayer[]
 }
@@ -38,7 +45,7 @@ export interface RoundPlayer {
   round_id: string
   name: string
   handicap: number
-  team?: number
+  team?: number   // 1 o 2 para dobles dentro de combinado_4
   position: number
 }
 
