@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { supabase, Round, RoundPlayer, Score, Hole, Course } from '@/lib/supabase'
 import {
   calcStroke, calcMatchPlay, calcMatchPlayDobles, calcBismarck,
-  calcCombinado4, calcCombinadoBismarck
+  calcCombinado4, calcCombinadoBismarck, getExtraStrokes
 } from '@/lib/golf'
 
 const PLAYER_COLORS = ['#2dd4bf', '#f59e0b', '#a78bfa', '#f87171']
@@ -14,8 +14,11 @@ const PLAYER_BG = ['#0d9488', '#d97706', '#7c3aed', '#dc2626']
 const MODE_LABELS: Record<string, string> = {
   stroke: 'Stroke Play', matchplay_individual: 'Match Play',
   matchplay_dobles: 'Dobles', bismarck: 'Bismarck',
-  combinado_4: 'Cuatro Completo', combinado_bismarck: 'Bismarck + Individuales'
+  combinado_4: 'Ryder', combinado_bismarck: 'Bismarck + Individuales'
 }
+
+// Modes that use handicap (show Score Neto tab)
+const MODES_WITH_HCP = ['stroke', 'matchplay_individual', 'matchplay_dobles', 'bismarck', 'combinado_4', 'combinado_bismarck']
 
 function ScoreBadge({ strokes, par }: { strokes: number | null; par: number }) {
   if (!strokes) return <span style={{ color: 'var(--text3)', fontSize: 13 }}>—</span>
@@ -84,7 +87,7 @@ export default function RoundPage() {
   const [scores, setScores] = useState<Score[]>([])
   const [holes, setHoles] = useState<Hole[]>([])
   const [course, setCourse] = useState<Course | null>(null)
-  const [activeTab, setActiveTab] = useState<'card' | 'results'>('card')
+  const [activeTab, setActiveTab] = useState<'card' | 'neto' | 'results'>('card')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
@@ -139,13 +142,14 @@ export default function RoundPage() {
 
   // Calculate results
   const r = round!
-  const strokeResults = calcStroke(players, scores, holes, holes.length)
+  const hcpPct = (r as any).hcp_pct ?? 100
+  const strokeResults = calcStroke(players, scores, holes, holes.length, hcpPct)
   const matchResult = r.mode === 'matchplay_individual' && players.length >= 2
-    ? calcMatchPlay(players[0], players[1], scores, holes, holes.length) : null
+    ? calcMatchPlay(players[0], players[1], scores, holes, holes.length, hcpPct) : null
   const doublesResult = r.mode === 'matchplay_dobles' && players.length === 4
-    ? calcMatchPlayDobles(players, scores, holes, holes.length) : null
+    ? calcMatchPlayDobles(players, scores, holes, holes.length, hcpPct) : null
   const bismarckResult = r.mode === 'bismarck' && players.length === 3
-    ? calcBismarck(players, scores, holes, holes.length) : null
+    ? calcBismarck(players, scores, holes, holes.length, hcpPct) : null
   const combinado4Result = r.mode === 'combinado_4' && players.length === 4
     ? calcCombinado4(players, scores, holes, holes.length, (r as any).dobles_mode || 'matchplay', (r as any).dobles_hcp_pct ?? 100, (r as any).individual_mode || 'matchplay', (r as any).individual_hcp_pct ?? 80) : null
   const combinadoBismarckResult = r.mode === 'combinado_bismarck' && players.length === 3
@@ -153,6 +157,16 @@ export default function RoundPage() {
 
   const front9 = holes.slice(0, 9)
   const back9 = holes.length > 9 ? holes.slice(9) : []
+
+  const showNetoTab = MODES_WITH_HCP.includes(r.mode)
+
+  // Build tabs
+  type Tab = 'card' | 'neto' | 'results'
+  const tabs: { key: Tab; label: string }[] = [
+    { key: 'card', label: 'Gross' },
+    ...(showNetoTab ? [{ key: 'neto' as Tab, label: 'Score Neto' }] : []),
+    { key: 'results', label: 'Resultados' },
+  ]
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
@@ -189,18 +203,21 @@ export default function RoundPage() {
         </div>
       </header>
 
+      {/* TABS */}
       <div style={{ borderBottom: '1px solid var(--border)', padding: '0 16px', display: 'flex', gap: 2 }}>
-        {(['card', 'results'] as const).map(t => (
-          <button key={t} onClick={() => setActiveTab(t)} style={{
+        {tabs.map(t => (
+          <button key={t.key} onClick={() => setActiveTab(t.key)} style={{
             padding: '10px 16px', background: 'transparent', border: 'none',
-            borderBottom: `2px solid ${activeTab === t ? '#2dd4bf' : 'transparent'}`,
-            color: activeTab === t ? '#2dd4bf' : 'var(--text3)',
+            borderBottom: `2px solid ${activeTab === t.key ? '#2dd4bf' : 'transparent'}`,
+            color: activeTab === t.key ? '#2dd4bf' : 'var(--text3)',
             fontFamily: 'var(--body)', fontSize: 13, fontWeight: 500, cursor: 'pointer'
-          }}>{t === 'card' ? 'Tarjeta' : 'Resultados'}</button>
+          }}>{t.label}</button>
         ))}
       </div>
 
       <main style={{ maxWidth: 800, margin: '0 auto', padding: '16px 12px' }}>
+
+        {/* ── GROSS (tarjeta bruta) ── */}
         {activeTab === 'card' && (
           <>
             {[front9, ...(back9.length > 0 ? [back9] : [])].map((holeSet, si) => (
@@ -273,6 +290,80 @@ export default function RoundPage() {
           </>
         )}
 
+        {/* ── SCORE NETO ── */}
+        {activeTab === 'neto' && (
+          <>
+            {[front9, ...(back9.length > 0 ? [back9] : [])].map((holeSet, si) => (
+              <div key={si} style={{ marginBottom: 24 }}>
+                <div style={{ fontFamily: 'var(--display)', fontSize: 13, letterSpacing: 2, color: 'var(--text3)', paddingBottom: 8 }}>
+                  {si === 0 ? 'IDA — HOYOS 1–9' : 'VUELTA — HOYOS 10–18'}
+                </div>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 500 }}>
+                    <thead>
+                      <tr>
+                        <th style={{ textAlign: 'left', padding: '8px 10px', fontSize: 11, color: 'var(--text3)', letterSpacing: 1, background: 'var(--surface2)', border: '1px solid var(--border)', minWidth: 100 }}>JUGADOR</th>
+                        {holeSet.map(h => (
+                          <th key={h.hole_number} style={{ width: 42, padding: '6px 4px', fontSize: 12, color: 'var(--text3)', background: 'var(--surface2)', border: '1px solid var(--border)' }}>
+                            <div>{h.hole_number}</div>
+                            <div style={{ fontSize: 9, color: 'var(--text3)', fontWeight: 400 }}>V{h.handicap}</div>
+                          </th>
+                        ))}
+                        <th style={{ width: 52, padding: '6px 8px', fontSize: 11, color: '#2dd4bf', background: 'var(--surface2)', border: '1px solid var(--border)' }}>NETO</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {players.map((p, pi) => {
+                        let rowNeto = 0
+                        let hasAll = true
+                        return (
+                          <tr key={p.id}>
+                            <td style={{ padding: '6px 10px', border: '1px solid var(--border)', background: 'var(--surface)' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <div style={{ width: 20, height: 20, borderRadius: '50%', background: PLAYER_BG[pi], display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, color: 'white', flexShrink: 0 }}>{p.name[0]?.toUpperCase()}</div>
+                                <span style={{ fontSize: 12, fontWeight: 500, whiteSpace: 'nowrap' }}>{p.name}</span>
+                              </div>
+                            </td>
+                            {holeSet.map(h => {
+                              const s = getScore(p.id, h.hole_number)
+                              const extra = getExtraStrokes(h.handicap, p.handicap, holes.length, hcpPct)
+                              const neto = s !== null ? s - extra : null
+                              if (neto !== null) rowNeto += neto; else hasAll = false
+                              return (
+                                <td key={h.hole_number} style={{ padding: 3, border: '1px solid var(--border)', background: 'var(--surface)', textAlign: 'center' }}>
+                                  {neto !== null ? (
+                                    <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 26, height: 26, fontSize: 12, fontWeight: 700,
+                                      background: extra > 0 ? 'rgba(45,212,191,0.15)' : 'var(--surface2)',
+                                      border: extra > 0 ? '1px solid rgba(45,212,191,0.4)' : '1px solid var(--border)',
+                                      borderRadius: 4, position: 'relative'
+                                    }}>
+                                      {neto}
+                                      {extra > 0 && <span style={{ position: 'absolute', top: -4, right: -4, width: 10, height: 10, background: '#2dd4bf', borderRadius: '50%', fontSize: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#051209', fontWeight: 900 }}>{extra}</span>}
+                                    </div>
+                                  ) : (
+                                    <span style={{ color: 'var(--text3)', fontSize: 13 }}>—</span>
+                                  )}
+                                </td>
+                              )
+                            })}
+                            <td style={{ padding: '6px 8px', border: '1px solid var(--border)', background: 'var(--surface)', textAlign: 'center', fontWeight: 700, color: PLAYER_COLORS[pi], fontSize: 14 }}>
+                              {hasAll && rowNeto > 0 ? rowNeto : '—'}
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ))}
+            <div style={{ fontSize: 11, color: 'var(--text3)', paddingTop: 4 }}>
+              El punto verde indica que el jugador recibe ventaja en ese hoyo.
+            </div>
+          </>
+        )}
+
+        {/* ── RESULTADOS ── */}
         {activeTab === 'results' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
@@ -283,7 +374,7 @@ export default function RoundPage() {
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr style={{ background: 'var(--surface2)' }}>
-                      {['Pos', 'Jugador', 'HCP', 'Gross', '+/-', 'Stableford'].map(h => (
+                      {['Pos', 'Jugador', 'HCP', 'Gross', 'Neto', '+/-', 'Stableford'].map(h => (
                         <th key={h} style={{ padding: '8px 12px', fontSize: 11, color: 'var(--text3)', textAlign: h === 'Jugador' ? 'left' : 'center', border: '1px solid var(--border)' }}>{h}</th>
                       ))}
                     </tr>
@@ -302,6 +393,7 @@ export default function RoundPage() {
                           </td>
                           <td style={{ padding: '10px 12px', border: '1px solid var(--border)', textAlign: 'center', color: 'var(--text3)' }}>{players[pi]?.handicap}</td>
                           <td style={{ padding: '10px 12px', border: '1px solid var(--border)', textAlign: 'center', fontWeight: 600 }}>{res.gross || '—'}</td>
+                          <td style={{ padding: '10px 12px', border: '1px solid var(--border)', textAlign: 'center', fontWeight: 600, color: '#2dd4bf' }}>{res.gross ? res.net : '—'}</td>
                           <td style={{ padding: '10px 12px', border: '1px solid var(--border)', textAlign: 'center', fontWeight: 600, color: res.overUnder < 0 ? '#2dd4bf' : res.overUnder > 0 ? '#f87171' : 'var(--text)' }}>
                             {res.gross ? (res.overUnder > 0 ? `+${res.overUnder}` : res.overUnder) : '—'}
                           </td>
@@ -318,7 +410,8 @@ export default function RoundPage() {
             {r.mode === 'matchplay_individual' && matchResult && (
               <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
                 <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontFamily: 'var(--display)', fontSize: 14, letterSpacing: 2, color: 'var(--text3)' }}>MATCH PLAY INDIVIDUAL</div>
-                <div style={{ padding: '20px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
+                {/* Estado actual arriba */}
+                <div style={{ padding: '16px 16px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
                   {players.slice(0, 2).map((p, i) => (
                     <div key={p.id} style={{ textAlign: 'center' }}>
                       <div style={{ width: 44, height: 44, borderRadius: '50%', background: PLAYER_BG[i], display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700, color: 'white', margin: '0 auto 8px' }}>{p.name[0]?.toUpperCase()}</div>
@@ -328,15 +421,26 @@ export default function RoundPage() {
                   ))}
                   <MatchStatusBadge status={matchResult.status} concluded={matchResult.concluded} label={matchResult.concluded ? '🏆 Terminado' : `${matchResult.holeResults.length} hoyos`} />
                 </div>
-                <div style={{ borderTop: '1px solid var(--border)', padding: '10px 16px', display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                  {matchResult.holeResults.map(h => (
-                    <div key={h.hole} style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: 9, color: 'var(--text3)', marginBottom: 2 }}>{h.hole}</div>
-                      <div style={{ width: 20, height: 20, borderRadius: 3, background: h.winner === players[0]?.id ? PLAYER_BG[0] : h.winner === players[1]?.id ? PLAYER_BG[1] : 'var(--border2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, color: 'white', fontWeight: 700 }}>
-                        {h.winner === 'halved' ? '=' : h.winner === players[0]?.id ? '1' : '2'}
+                {/* Hoyo a hoyo con estado acumulado */}
+                <div style={{ borderTop: '1px solid var(--border)', padding: '10px 16px', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {matchResult.holeResults.map((h, idx) => {
+                    // Estado ANTES de este hoyo
+                    const prevStatus = idx === 0 ? 0 : matchResult.holeResults[idx - 1].runningStatus
+                    const prevAbs = Math.abs(prevStatus)
+                    const prevLeader = prevStatus > 0 ? players[0]?.id : prevStatus < 0 ? players[1]?.id : null
+                    return (
+                      <div key={h.hole} style={{ textAlign: 'center' }}>
+                        {/* Estado anterior al hoyo */}
+                        <div style={{ fontSize: 8, color: prevAbs > 0 ? (prevLeader === players[0]?.id ? PLAYER_COLORS[0] : PLAYER_COLORS[1]) : 'var(--text3)', marginBottom: 1, fontWeight: 600, minHeight: 10 }}>
+                          {prevAbs > 0 ? `${prevAbs}↑` : '='}
+                        </div>
+                        <div style={{ fontSize: 9, color: 'var(--text3)', marginBottom: 2 }}>{h.hole}</div>
+                        <div style={{ width: 22, height: 22, borderRadius: 3, background: h.winner === players[0]?.id ? PLAYER_BG[0] : h.winner === players[1]?.id ? PLAYER_BG[1] : 'var(--border2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, color: 'white', fontWeight: 700 }}>
+                          {h.winner === 'halved' ? '=' : h.winner === players[0]?.id ? '1' : '2'}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </div>
             )}
@@ -345,7 +449,7 @@ export default function RoundPage() {
             {r.mode === 'matchplay_dobles' && doublesResult && (
               <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
                 <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontFamily: 'var(--display)', fontSize: 14, letterSpacing: 2, color: 'var(--text3)' }}>MATCH PLAY DOBLES</div>
-                <div style={{ padding: '20px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
+                <div style={{ padding: '16px 16px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
                   {[1, 2].map(t => (
                     <div key={t} style={{ textAlign: 'center' }}>
                       <div style={{ fontSize: 12, fontWeight: 600, color: doublesResult.leadingTeam === t ? PLAYER_COLORS[t === 1 ? 0 : 2] : 'var(--text2)', marginBottom: 4 }}>TEAM {t}</div>
@@ -353,6 +457,24 @@ export default function RoundPage() {
                     </div>
                   ))}
                   <MatchStatusBadge status={doublesResult.status} concluded={doublesResult.concluded} label={doublesResult.concluded ? '🏆 Terminado' : `${doublesResult.holeResults.length} hoyos`} />
+                </div>
+                <div style={{ borderTop: '1px solid var(--border)', padding: '10px 16px', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {doublesResult.holeResults.map((h, idx) => {
+                    const prevStatus = idx === 0 ? 0 : doublesResult.holeResults[idx - 1].runningStatus
+                    const prevAbs = Math.abs(prevStatus)
+                    const prevLeaderTeam = prevStatus > 0 ? 1 : prevStatus < 0 ? 2 : null
+                    return (
+                      <div key={h.hole} style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: 8, color: prevAbs > 0 ? PLAYER_COLORS[prevLeaderTeam === 1 ? 0 : 2] : 'var(--text3)', marginBottom: 1, fontWeight: 600, minHeight: 10 }}>
+                          {prevAbs > 0 ? `${prevAbs}↑` : '='}
+                        </div>
+                        <div style={{ fontSize: 9, color: 'var(--text3)', marginBottom: 2 }}>{h.hole}</div>
+                        <div style={{ width: 22, height: 22, borderRadius: 3, background: h.winner === 'team1' ? PLAYER_BG[0] : h.winner === 'team2' ? PLAYER_BG[2] : 'var(--border2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, color: 'white', fontWeight: 700 }}>
+                          {h.winner === 'halved' ? '=' : h.winner === 'team1' ? 'T1' : 'T2'}
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
             )}
@@ -377,7 +499,7 @@ export default function RoundPage() {
               </div>
             )}
 
-            {/* COMBINADO 4 */}
+            {/* RYDER (combinado 4) */}
             {r.mode === 'combinado_4' && combinado4Result && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {/* Dobles */}

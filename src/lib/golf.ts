@@ -9,6 +9,25 @@ export function getExtraStrokes(holeHcp: number, playerHcp: number, totalHoles: 
   return base + (holeHcp <= remainder ? 1 : 0)
 }
 
+// Versión para match play: calcula ventaja relativa entre dos jugadores.
+// El jugador con mayor handicap recibe (diff) golpes en los hoyos de menor ventaja.
+export function getMatchPlayStrokes(
+  holeHcp: number,
+  hcp1: number, hcp2: number,
+  totalHoles: number, pct: number = 100
+): { extra1: number; extra2: number } {
+  const adj1 = Math.round((totalHoles === 9 ? hcp1 / 2 : hcp1) * pct / 100)
+  const adj2 = Math.round((totalHoles === 9 ? hcp2 / 2 : hcp2) * pct / 100)
+  const diff = Math.abs(adj1 - adj2)
+  const lowerHcp = adj1 <= adj2 ? 1 : 2
+  // El jugador de menor HCP no recibe golpes; el de mayor recibe diff golpes en hoyos 1..diff
+  const extraHigher = (diff > 0 && holeHcp <= diff) ? 1 : 0
+  return {
+    extra1: lowerHcp === 1 ? 0 : extraHigher,
+    extra2: lowerHcp === 2 ? 0 : extraHigher,
+  }
+}
+
 export function getNetStrokes(strokes: number, holeHcp: number, playerHcp: number, totalHoles: number, pct: number = 100): number {
   return strokes - getExtraStrokes(holeHcp, playerHcp, totalHoles, pct)
 }
@@ -82,8 +101,9 @@ export function calcMatchPlay(
     const s2 = scores.find(s => s.player_id === p2.id && s.hole_number === h.hole_number)
     if (!s1?.strokes || !s2?.strokes) return
 
-    const n1 = getNetStrokes(s1.strokes, h.handicap, p1.handicap, totalHoles, pct)
-    const n2 = getNetStrokes(s2.strokes, h.handicap, p2.handicap, totalHoles, pct)
+    const { extra1, extra2 } = getMatchPlayStrokes(h.handicap, p1.handicap, p2.handicap, totalHoles, pct)
+    const n1 = s1.strokes - extra1
+    const n2 = s2.strokes - extra2
 
     let winner: string | null = null
     if (n1 < n2) { running++; winner = p1.id }
@@ -128,16 +148,29 @@ export function calcMatchPlayDobles(
 
   holes.forEach((h, i) => {
     if (concluded) return
-    const best = (team: RoundPlayer[]) => {
+    const best = (team: RoundPlayer[], otherTeam: RoundPlayer[]) => {
+      // En dobles la ventaja se calcula jugador vs jugador contrario (promedio del otro equipo)
+      // Usamos la convención: cada jugador se compara contra el de menor HCP del equipo rival
+      const minOtherHcp = Math.min(...otherTeam.map(p => p.handicap))
       const nets = team.map(p => {
         const s = scores.find(sc => sc.player_id === p.id && sc.hole_number === h.hole_number)
         if (!s?.strokes) return Infinity
-        return getNetStrokes(s.strokes, h.handicap, p.handicap, totalHoles, pct)
+        const { extra1 } = getMatchPlayStrokes(h.handicap, p.handicap, minOtherHcp, totalHoles, pct)
+        // extra1 = ventaja del jugador actual vs el de menor HCP rival
+        // Si jugador actual tiene mayor HCP, recibe golpes; si menor, no
+        const { extra2 } = getMatchPlayStrokes(h.handicap, minOtherHcp, p.handicap, totalHoles, pct)
+        const extra = p.handicap >= minOtherHcp ? extra1 : 0
+        // Recalcular correctamente: el jugador con más HCP recibe golpes
+        const adjP = Math.round((totalHoles === 9 ? p.handicap / 2 : p.handicap) * pct / 100)
+        const adjO = Math.round((totalHoles === 9 ? minOtherHcp / 2 : minOtherHcp) * pct / 100)
+        const diff = Math.max(0, adjP - adjO)
+        const extraStrokes = diff > 0 && h.handicap <= diff ? 1 : 0
+        return s.strokes - extraStrokes
       })
       return Math.min(...nets)
     }
-    const b1 = best(team1)
-    const b2 = best(team2)
+    const b1 = best(team1, team2)
+    const b2 = best(team2, team1)
     if (b1 === Infinity || b2 === Infinity) return
 
     let winner: string | null = null

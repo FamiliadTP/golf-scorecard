@@ -5,11 +5,11 @@ import Link from 'next/link'
 import { supabase, Course, GameMode, Player } from '@/lib/supabase'
 
 const MODES: { value: GameMode; label: string; desc: string; color: string; players: string }[] = [
+  { value: 'combinado_4', label: 'Ryder', desc: 'Dobles + 4 individuales cruzados', color: '#34d399', players: '4 jugadores' },
   { value: 'stroke', label: 'Stroke Play', desc: 'Stableford con handicap', color: '#2dd4bf', players: '1–4 jugadores' },
   { value: 'matchplay_individual', label: 'Match Play', desc: 'Individual hoyo a hoyo', color: '#f59e0b', players: '2 jugadores' },
   { value: 'matchplay_dobles', label: 'Match Play Dobles', desc: 'Mejor bola 2 vs 2', color: '#a78bfa', players: '4 jugadores' },
   { value: 'bismarck', label: 'Bismarck', desc: '6 puntos por hoyo (4-2-0)', color: '#f87171', players: 'Exactamente 3' },
-  { value: 'combinado_4', label: 'Cuatro Completo', desc: 'Dobles + 4 individuales cruzados', color: '#34d399', players: '4 jugadores' },
   { value: 'combinado_bismarck', label: 'Bismarck + Individuales', desc: 'Bismarck + 3 individuales', color: '#fb923c', players: 'Exactamente 3' },
 ]
 
@@ -150,6 +150,7 @@ function PlayerSelector({
         <label style={{ fontSize: 10, color: 'var(--text3)', letterSpacing: 1, display: 'block', marginBottom: 4 }}>HCP</label>
         <input type="number" min={0} max={54} value={player.handicap}
           onChange={e => onUpdate('handicap', parseInt(e.target.value) || 0)}
+          onFocus={e => e.target.select()}
           style={{ ...inp, padding: '7px 10px' }} />
       </div>
 
