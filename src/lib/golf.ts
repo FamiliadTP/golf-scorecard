@@ -2,6 +2,7 @@ import { Hole, RoundPlayer, Score } from './supabase'
 
 // ─── Handicap helpers ────────────────────────────────────────────────
 
+// Ventaja individual contra el campo (usada en Stroke Play)
 export function getExtraStrokes(holeHcp: number, playerHcp: number, totalHoles: number, pct: number = 100): number {
   const adj = Math.round((totalHoles === 9 ? playerHcp / 2 : playerHcp) * pct / 100)
   const base = Math.floor(adj / totalHoles)
@@ -9,23 +10,14 @@ export function getExtraStrokes(holeHcp: number, playerHcp: number, totalHoles: 
   return base + (holeHcp <= remainder ? 1 : 0)
 }
 
-// Versión para match play: calcula ventaja relativa entre dos jugadores.
-// El jugador con mayor handicap recibe (diff) golpes en los hoyos de menor ventaja.
-export function getMatchPlayStrokes(
-  holeHcp: number,
-  hcp1: number, hcp2: number,
-  totalHoles: number, pct: number = 100
-): { extra1: number; extra2: number } {
-  const adj1 = Math.round((totalHoles === 9 ? hcp1 / 2 : hcp1) * pct / 100)
-  const adj2 = Math.round((totalHoles === 9 ? hcp2 / 2 : hcp2) * pct / 100)
-  const diff = Math.abs(adj1 - adj2)
-  const lowerHcp = adj1 <= adj2 ? 1 : 2
-  // El jugador de menor HCP no recibe golpes; el de mayor recibe diff golpes en hoyos 1..diff
-  const extraHigher = (diff > 0 && holeHcp <= diff) ? 1 : 0
-  return {
-    extra1: lowerHcp === 1 ? 0 : extraHigher,
-    extra2: lowerHcp === 2 ? 0 : extraHigher,
-  }
+// Ventaja relativa en un grupo: el jugador con menor HCP ajustado es la referencia (0 golpes).
+// Cada jugador recibe (su HCP ajustado - minHCP) golpes, en los hoyos con ventaja <= esa diferencia.
+export function getRelativeExtra(holeHcp: number, playerHcp: number, allHcps: number[], totalHoles: number, pct: number = 100): number {
+  const adj = (hcp: number) => Math.round((totalHoles === 9 ? hcp / 2 : hcp) * pct / 100)
+  const minAdj = Math.min(...allHcps.map(adj))
+  const playerAdj = adj(playerHcp)
+  const diff = playerAdj - minAdj
+  return diff > 0 && holeHcp <= diff ? 1 : 0
 }
 
 export function getNetStrokes(strokes: number, holeHcp: number, playerHcp: number, totalHoles: number, pct: number = 100): number {
@@ -94,6 +86,7 @@ export function calcMatchPlay(
   const holeResults: MatchHoleResult[] = []
   let concluded = false
   let concludedAt: number | null = null
+  const allHcps = [p1.handicap, p2.handicap]
 
   holes.forEach((h, i) => {
     if (concluded) return
@@ -101,9 +94,10 @@ export function calcMatchPlay(
     const s2 = scores.find(s => s.player_id === p2.id && s.hole_number === h.hole_number)
     if (!s1?.strokes || !s2?.strokes) return
 
-    const { extra1, extra2 } = getMatchPlayStrokes(h.handicap, p1.handicap, p2.handicap, totalHoles, pct)
-    const n1 = s1.strokes - extra1
-    const n2 = s2.strokes - extra2
+    const e1 = getRelativeExtra(h.handicap, p1.handicap, allHcps, totalHoles, pct)
+    const e2 = getRelativeExtra(h.handicap, p2.handicap, allHcps, totalHoles, pct)
+    const n1 = s1.strokes - e1
+    const n2 = s2.strokes - e2
 
     let winner: string | null = null
     if (n1 < n2) { running++; winner = p1.id }
@@ -120,7 +114,7 @@ export function calcMatchPlay(
 
   const leaderId = running > 0 ? p1.id : running < 0 ? p2.id : null
   const abs = Math.abs(running)
-  const holesRemaining = holes.length - concludedAt!
+  const holesRemaining = holes.length - (concludedAt ? holes.findIndex(h => h.hole_number === concludedAt) + 1 : holeResults.length)
   let status = 'All Square'
   if (concluded && concludedAt) status = `${abs}&${holesRemaining}`
   else if (abs > 0) status = `${abs} UP`
@@ -142,35 +136,24 @@ export function calcMatchPlayDobles(
 ): DoublesResult {
   const team1 = players.filter(p => p.team === 1)
   const team2 = players.filter(p => p.team === 2)
+  const allHcps = players.map(p => p.handicap)
   let running = 0
   const holeResults: MatchHoleResult[] = []
   let concluded = false
 
   holes.forEach((h, i) => {
     if (concluded) return
-    const best = (team: RoundPlayer[], otherTeam: RoundPlayer[]) => {
-      // En dobles la ventaja se calcula jugador vs jugador contrario (promedio del otro equipo)
-      // Usamos la convención: cada jugador se compara contra el de menor HCP del equipo rival
-      const minOtherHcp = Math.min(...otherTeam.map(p => p.handicap))
+    const best = (team: RoundPlayer[]) => {
       const nets = team.map(p => {
         const s = scores.find(sc => sc.player_id === p.id && sc.hole_number === h.hole_number)
         if (!s?.strokes) return Infinity
-        const { extra1 } = getMatchPlayStrokes(h.handicap, p.handicap, minOtherHcp, totalHoles, pct)
-        // extra1 = ventaja del jugador actual vs el de menor HCP rival
-        // Si jugador actual tiene mayor HCP, recibe golpes; si menor, no
-        const { extra2 } = getMatchPlayStrokes(h.handicap, minOtherHcp, p.handicap, totalHoles, pct)
-        const extra = p.handicap >= minOtherHcp ? extra1 : 0
-        // Recalcular correctamente: el jugador con más HCP recibe golpes
-        const adjP = Math.round((totalHoles === 9 ? p.handicap / 2 : p.handicap) * pct / 100)
-        const adjO = Math.round((totalHoles === 9 ? minOtherHcp / 2 : minOtherHcp) * pct / 100)
-        const diff = Math.max(0, adjP - adjO)
-        const extraStrokes = diff > 0 && h.handicap <= diff ? 1 : 0
-        return s.strokes - extraStrokes
+        const extra = getRelativeExtra(h.handicap, p.handicap, allHcps, totalHoles, pct)
+        return s.strokes - extra
       })
       return Math.min(...nets)
     }
-    const b1 = best(team1, team2)
-    const b2 = best(team2, team1)
+    const b1 = best(team1)
+    const b2 = best(team2)
     if (b1 === Infinity || b2 === Infinity) return
 
     let winner: string | null = null
@@ -211,12 +194,14 @@ export function calcBismarck(
   const totals: Record<string, number> = {}
   players.forEach(p => { totals[p.id] = 0 })
   const holeResults: BismarckHoleResult[] = []
+  const allHcps = players.map(p => p.handicap)
 
   holes.forEach(h => {
     const nets = players.map(p => {
       const s = scores.find(sc => sc.player_id === p.id && sc.hole_number === h.hole_number)
       const strokes = s?.strokes ?? null
-      const net = strokes !== null ? getNetStrokes(strokes, h.handicap, p.handicap, totalHoles, pct) : null
+      const extra = strokes !== null ? getRelativeExtra(h.handicap, p.handicap, allHcps, totalHoles, pct) : 0
+      const net = strokes !== null ? strokes - extra : null
       return { playerId: p.id, name: p.name, net }
     })
     if (nets.some(n => n.net === null)) return
@@ -247,7 +232,6 @@ export function calcBismarck(
 }
 
 // ─── Combinado 4 jugadores ────────────────────────────────────────────
-// Un dobles (A&B vs C&D) + 4 individuales cruzados
 
 export interface Combinado4Result {
   dobles: DoublesResult | null
@@ -261,7 +245,7 @@ export interface Combinado4Result {
 }
 
 export function calcCombinado4(
-  players: RoundPlayer[],  // posición 0,1 = team1 / posición 2,3 = team2
+  players: RoundPlayer[],
   scores: Score[],
   holes: Hole[],
   totalHoles: number,
@@ -273,17 +257,14 @@ export function calcCombinado4(
   const team1 = players.filter(p => p.team === 1)
   const team2 = players.filter(p => p.team === 2)
 
-  // Dobles
   let dobles: DoublesResult | null = null
   let doblesStroke: StrokeResult[] | null = null
   if (doblesMode === 'matchplay') {
     dobles = calcMatchPlayDobles(players, scores, holes, totalHoles, doblesHcpPct)
   } else {
-    // Stroke dobles: mejor bola por equipo, comparar totales stableford
     doblesStroke = calcStroke(players, scores, holes, totalHoles, doblesHcpPct)
   }
 
-  // Individuales cruzados: T1[0] vs T2[0], T1[0] vs T2[1], T1[1] vs T2[0], T1[1] vs T2[1]
   const pairs = [
     [team1[0], team2[0]],
     [team1[0], team2[1]],
@@ -293,18 +274,10 @@ export function calcCombinado4(
 
   const individuales = pairs.map(([p1, p2]) => {
     if (individualMode === 'matchplay') {
-      return {
-        p1, p2,
-        match: calcMatchPlay(p1, p2, scores, holes, totalHoles, individualHcpPct),
-        stroke: null
-      }
+      return { p1, p2, match: calcMatchPlay(p1, p2, scores, holes, totalHoles, individualHcpPct), stroke: null }
     } else {
       const results = calcStroke([p1, p2], scores, holes, totalHoles, individualHcpPct)
-      return {
-        p1, p2,
-        match: null,
-        stroke: { p1: results[0], p2: results[1] }
-      }
+      return { p1, p2, match: null, stroke: { p1: results[0], p2: results[1] } }
     }
   })
 
@@ -324,7 +297,7 @@ export interface CombinadoBismarckResult {
 }
 
 export function calcCombinadoBismarck(
-  players: RoundPlayer[],  // exactamente 3
+  players: RoundPlayer[],
   scores: Score[],
   holes: Hole[],
   totalHoles: number,
@@ -334,7 +307,6 @@ export function calcCombinadoBismarck(
 ): CombinadoBismarckResult {
   const bismarck = calcBismarck(players, scores, holes, totalHoles, bismarckHcpPct)
 
-  // 3 pares: 0v1, 0v2, 1v2
   const pairs = [
     [players[0], players[1]],
     [players[0], players[2]],

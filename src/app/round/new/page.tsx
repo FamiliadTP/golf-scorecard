@@ -15,7 +15,7 @@ const MODES: { value: GameMode; label: string; desc: string; color: string; play
 
 const PLAYER_COLORS = ['#2dd4bf', '#f59e0b', '#a78bfa', '#f87171']
 const PLAYER_BG = ['#0d9488', '#d97706', '#7c3aed', '#dc2626']
-const HCP_OPTIONS = [0, 80, 100]
+const HCP_OPTIONS = [0, 75, 80, 100]
 
 const inp: React.CSSProperties = {
   background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)',
@@ -177,6 +177,7 @@ export default function NewRound() {
     { name: '', handicap: 18, team: 1 },
     { name: '', handicap: 18, team: 2 },
   ])
+  const [hcpPct, setHcpPct] = useState(100)
   const [doblesMode, setDoblesMode] = useState<'stroke' | 'matchplay'>('matchplay')
   const [doblesHcpPct, setDoblesHcpPct] = useState(100)
   const [individualMode, setIndividualMode] = useState<'stroke' | 'matchplay'>('matchplay')
@@ -243,6 +244,10 @@ export default function NewRound() {
     setSaving(true)
 
     const roundData: any = { course_id: courseId, mode, holes_played: holesPlayed, date }
+    // Modalidades simples: guardar hcp_pct
+    if (['stroke', 'matchplay_individual', 'matchplay_dobles', 'bismarck'].includes(mode)) {
+      roundData.hcp_pct = hcpPct
+    }
     if (mode === 'combinado_4') {
       roundData.dobles_mode = doblesMode; roundData.dobles_hcp_pct = doblesHcpPct
       roundData.individual_mode = individualMode; roundData.individual_hcp_pct = individualHcpPct
@@ -342,6 +347,14 @@ export default function NewRound() {
             ))}
           </div>
         </section>
+
+        {/* % Handicap para modalidades simples */}
+        {['stroke', 'matchplay_individual', 'matchplay_dobles', 'bismarck'].includes(mode) && (
+          <section style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
+            <h2 style={{ fontFamily: 'var(--display)', fontSize: 14, letterSpacing: 2, color: 'var(--text3)', marginBottom: 14 }}>% HANDICAP</h2>
+            <HcpPctSelector value={hcpPct} onChange={setHcpPct} />
+          </section>
+        )}
 
         {/* Config combinado 4 */}
         {mode === 'combinado_4' && (
