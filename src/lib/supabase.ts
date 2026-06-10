@@ -1,9 +1,23 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+let _supabase: SupabaseClient | null = null
 
-export const supabase = createClient(supabaseUrl, supabaseKey)
+function getSupabase(): SupabaseClient {
+  if (!_supabase) {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (!url || !key) throw new Error('Supabase env vars not set')
+    _supabase = createClient(url, key)
+  }
+  return _supabase
+}
+
+// Proxy para mantener compatibilidad con supabase.from(...) etc.
+export const supabase = new Proxy({} as SupabaseClient, {
+  get(_target, prop) {
+    return (getSupabase() as any)[prop]
+  }
+})
 
 export type GameMode = 'stroke' | 'matchplay_individual' | 'matchplay_dobles' | 'bismarck' | 'combinado_4' | 'combinado_bismarck'
 
@@ -29,6 +43,7 @@ export interface Round {
   mode: GameMode
   holes_played: number
   date: string
+  hcp_pct?: number
   dobles_mode?: 'stroke' | 'matchplay'
   dobles_hcp_pct?: number
   individual_mode?: 'stroke' | 'matchplay'
@@ -55,7 +70,6 @@ export interface Score {
   strokes: number | null
 }
 
-// Jugador registrado (lista maestra)
 export interface Player {
   id: string
   name: string
