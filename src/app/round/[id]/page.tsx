@@ -94,6 +94,7 @@ export default function RoundPage() {
   const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
+    if (!id) return
     async function load() {
       const { data: r } = await supabase.from('rounds').select('*, course:courses(*, holes(*))').eq('id', id).single()
       if (!r) return
@@ -411,7 +412,6 @@ export default function RoundPage() {
             {r.mode === 'matchplay_individual' && matchResult && (
               <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
                 <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontFamily: 'var(--display)', fontSize: 14, letterSpacing: 2, color: 'var(--text3)' }}>MATCH PLAY INDIVIDUAL</div>
-                {/* Estado actual arriba */}
                 <div style={{ padding: '16px 16px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
                   {players.slice(0, 2).map((p, i) => (
                     <div key={p.id} style={{ textAlign: 'center' }}>
@@ -422,16 +422,13 @@ export default function RoundPage() {
                   ))}
                   <MatchStatusBadge status={matchResult.status} concluded={matchResult.concluded} label={matchResult.concluded ? '🏆 Terminado' : `${matchResult.holeResults.length} hoyos`} />
                 </div>
-                {/* Hoyo a hoyo con estado acumulado */}
                 <div style={{ borderTop: '1px solid var(--border)', padding: '10px 16px', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                   {matchResult.holeResults.map((h, idx) => {
-                    // Estado ANTES de este hoyo
                     const prevStatus = idx === 0 ? 0 : matchResult.holeResults[idx - 1].runningStatus
                     const prevAbs = Math.abs(prevStatus)
                     const prevLeader = prevStatus > 0 ? players[0]?.id : prevStatus < 0 ? players[1]?.id : null
                     return (
                       <div key={h.hole} style={{ textAlign: 'center' }}>
-                        {/* Estado anterior al hoyo */}
                         <div style={{ fontSize: 8, color: prevAbs > 0 ? (prevLeader === players[0]?.id ? PLAYER_COLORS[0] : PLAYER_COLORS[1]) : 'var(--text3)', marginBottom: 1, fontWeight: 600, minHeight: 10 }}>
                           {prevAbs > 0 ? `${prevAbs}↑` : '='}
                         </div>
@@ -503,7 +500,6 @@ export default function RoundPage() {
             {/* RYDER (combinado 4) */}
             {r.mode === 'combinado_4' && combinado4Result && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {/* Dobles */}
                 <div style={{ background: 'var(--surface)', border: '1px solid #34d39930', borderRadius: 12, overflow: 'hidden' }}>
                   <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontFamily: 'var(--display)', fontSize: 14, letterSpacing: 2, color: '#34d399' }}>
                     DOBLES — {((r as any).dobles_mode === 'stroke' ? 'STROKE' : 'MATCH PLAY')} · HCP {(r as any).dobles_hcp_pct}%
@@ -538,7 +534,6 @@ export default function RoundPage() {
                   </div>
                 </div>
 
-                {/* Individuales */}
                 <div style={{ background: 'var(--surface)', border: '1px solid #f59e0b30', borderRadius: 12, overflow: 'hidden' }}>
                   <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontFamily: 'var(--display)', fontSize: 14, letterSpacing: 2, color: '#f59e0b' }}>
                     INDIVIDUALES — {((r as any).individual_mode === 'stroke' ? 'STROKE' : 'MATCH PLAY')} · HCP {(r as any).individual_hcp_pct}%
