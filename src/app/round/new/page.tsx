@@ -1,6 +1,6 @@
 'use client'
 export const dynamic = 'force-dynamic'
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase, Course, GameMode, Player } from '@/lib/supabase'
@@ -59,7 +59,7 @@ function ModeSelector({ value, onChange, label }: { value: 'stroke' | 'matchplay
   )
 }
 
-// Componente selector de jugador con desplegable
+// Componente selector de jugador simple (campo libre)
 function PlayerSelector({
   index, player, allPlayers, registeredPlayers, onUpdate, onRemove, showRemove, showTeam
 }: {
@@ -72,78 +72,21 @@ function PlayerSelector({
   showRemove: boolean
   showTeam: boolean
 }) {
-  const [open, setOpen] = useState(false)
-  const [search, setSearch] = useState('')
-  const ref = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [])
-
-  const usedNames = allPlayers.map((p, i) => i !== index ? p.name.toLowerCase() : '').filter(Boolean)
-  const filtered = registeredPlayers.filter(p =>
-    !usedNames.includes(p.name.toLowerCase()) &&
-    p.name.toLowerCase().includes(search.toLowerCase())
-  )
-  const showAddNew = search.trim() && !registeredPlayers.find(p => p.name.toLowerCase() === search.toLowerCase())
-
-  const selectPlayer = (name: string, hcp: number) => {
-    onUpdate('name', name)
-    onUpdate('handicap', hcp)
-    setSearch('')
-    setOpen(false)
-  }
-
   return (
     <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '12px 14px', borderRadius: 10, background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)' }}>
       <div style={{ width: 32, height: 32, borderRadius: '50%', background: PLAYER_BG[index], display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 12, color: 'white', flexShrink: 0, marginTop: 18 }}>
         {showTeam ? `T${player.team}` : (index + 1)}
       </div>
 
-      <div style={{ flex: 1 }} ref={ref}>
+      <div style={{ flex: 1 }}>
         <label style={{ fontSize: 10, color: 'var(--text3)', letterSpacing: 1, display: 'block', marginBottom: 4 }}>NOMBRE</label>
         <div style={{ position: 'relative' }}>
           <input
-            value={open ? search : player.name}
-            onFocus={() => { setOpen(true); setSearch('') }}
-            onChange={e => { setSearch(e.target.value); if (!open) setOpen(true) }}
-            placeholder="Buscar o escribir nombre..."
+            value={player.name}
+            onChange={e => onUpdate('name', e.target.value)}
+            placeholder="Nombre del jugador..."
             style={{ ...inp, padding: '7px 10px' }}
           />
-          {open && (
-            <div style={{
-              position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50,
-              background: '#0f2318', border: '1px solid var(--border2)',
-              borderRadius: 8, marginTop: 4, maxHeight: 200, overflowY: 'auto',
-              boxShadow: '0 8px 24px rgba(0,0,0,0.4)'
-            }}>
-              {filtered.length === 0 && !showAddNew && (
-                <div style={{ padding: '10px 14px', fontSize: 13, color: 'var(--text3)' }}>No hay jugadores registrados</div>
-              )}
-              {filtered.map(p => (
-                <button key={p.id} onClick={() => selectPlayer(p.name, p.last_handicap)} style={{
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  width: '100%', padding: '10px 14px', background: 'transparent',
-                  border: 'none', borderBottom: '1px solid var(--border)',
-                  color: 'var(--text)', cursor: 'pointer', fontSize: 13, textAlign: 'left'
-                }}>
-                  <span>{p.name}</span>
-                  <span style={{ fontSize: 11, color: 'var(--text3)' }}>HCP {p.last_handicap}</span>
-                </button>
-              ))}
-              {showAddNew && (
-                <button onClick={() => selectPlayer(search.trim(), 18)} style={{
-                  display: 'flex', alignItems: 'center', gap: 8,
-                  width: '100%', padding: '10px 14px', background: 'transparent',
-                  border: 'none', color: '#2dd4bf', cursor: 'pointer', fontSize: 13, textAlign: 'left'
-                }}>
-                  <span>＋</span> Agregar "{search.trim()}"
-                </button>
-              )}
-            </div>
-          )}
         </div>
       </div>
 
@@ -302,8 +245,8 @@ export default function NewRound() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <div>
                 <label style={{ fontSize: 11, color: 'var(--text3)', letterSpacing: 1, display: 'block', marginBottom: 6 }}>CAMPO</label>
-                <select value={courseId} onChange={e => { setCourseId(e.target.value); const c = courses.find(c => c.id === e.target.value); if (c) setHolesPlayed((c as any).holes_count || 18) }} style={inp}>
-                  {courses.map(c => <option key={c.id} value={c.id}>{c.name}{c.club ? ` — ${c.club}` : ''}</option>)}
+                <select value={courseId} onChange={e => { setCourseId(e.target.value); const c = courses.find(c => c.id === e.target.value); if (c) setHolesPlayed((c as any).holes_count || 18) }} style={{ ...inp, color: '#e2f5e9' }}>
+                  {courses.map(c => <option key={c.id} value={c.id} style={{ background: '#0f2318', color: '#e2f5e9' }}>{c.name}{c.club ? ` — ${c.club}` : ''}</option>)}
                 </select>
               </div>
               <div style={{ display: 'flex', gap: 10 }}>
