@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { supabase, Round, RoundPlayer, Score, Hole, Course } from '@/lib/supabase'
 import {
   calcStroke, calcMatchPlay, calcMatchPlayDobles, calcBismarck,
-  calcCombinado4, calcCombinadoBismarck, getExtraStrokes
+  calcCombinado4, calcCombinadoBismarck, getExtraStrokes, getRelativeExtra
 } from '@/lib/golf'
 
 const PLAYER_COLORS = ['#2dd4bf', '#f59e0b', '#a78bfa', '#f87171']
@@ -49,35 +49,71 @@ function MatchStatusBadge({ status, concluded, label }: { status: string; conclu
   )
 }
 
-function IndividualResultCard({ p1, p2, match, stroke, pi1, pi2 }: any) {
+function PlayerChip({ name, pi, side }: { name: string; pi: number; side: 'left' | 'right' }) {
   return (
-    <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 14px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <div style={{ width: 22, height: 22, borderRadius: '50%', background: PLAYER_BG[pi1], display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, color: 'white' }}>{p1.name[0]?.toUpperCase()}</div>
-          <span style={{ fontSize: 13, fontWeight: 600, color: PLAYER_COLORS[pi1] }}>{p1.name}</span>
-        </div>
-        <span style={{ fontSize: 11, color: 'var(--text3)' }}>vs</span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontSize: 13, fontWeight: 600, color: PLAYER_COLORS[pi2] }}>{p2.name}</span>
-          <div style={{ width: 22, height: 22, borderRadius: '50%', background: PLAYER_BG[pi2], display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, color: 'white' }}>{p2.name[0]?.toUpperCase()}</div>
-        </div>
-        {match && <div style={{ fontFamily: 'var(--display)', fontSize: 20, color: match.concluded ? '#f59e0b' : '#2dd4bf', minWidth: 60, textAlign: 'center' }}>{match.status}</div>}
-        {stroke && (
-          <div style={{ display: 'flex', gap: 12, fontSize: 12 }}>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ color: 'var(--text3)', fontSize: 10 }}>Stableford</div>
-              <div style={{ color: PLAYER_COLORS[pi1], fontFamily: 'var(--display)', fontSize: 18 }}>{stroke.p1.stableford}</div>
-            </div>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ color: 'var(--text3)', fontSize: 10 }}>Stableford</div>
-              <div style={{ color: PLAYER_COLORS[pi2], fontFamily: 'var(--display)', fontSize: 18 }}>{stroke.p2.stableford}</div>
-            </div>
-          </div>
-        )}
-      </div>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexDirection: side === 'right' ? 'row-reverse' : 'row', flex: 1, justifyContent: side === 'right' ? 'flex-end' : 'flex-start' }}>
+      <div style={{ width: 22, height: 22, borderRadius: '50%', background: PLAYER_BG[pi], display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, color: 'white', flexShrink: 0 }}>{name[0]?.toUpperCase()}</div>
+      <span style={{ fontSize: 13, fontWeight: 600, color: PLAYER_COLORS[pi] }}>{name}</span>
     </div>
   )
+}
+
+function IndividualResultCard({ p1, p2, match, stroke, pi1, pi2 }: any) {
+  // Determine winner for match play
+  const winnerId = match?.concluded ? match.leaderId : null
+  const loser = winnerId === p1.id ? p2 : winnerId === p2.id ? p1 : null
+  const winner = winnerId === p1.id ? p1 : winnerId === p2.id ? p2 : null
+  const winnerPi = winnerId === p1.id ? pi1 : pi2
+  const loserPi = winnerId === p1.id ? pi2 : pi1
+
+  if (match) {
+    // Show: [winner chip] [score] [loser chip]  or  [p1] [score] [p2] if all square
+    const isAllSquare = match.status === 'AS' || match.status === 'ALL SQUARE'
+    const leftP = isAllSquare ? p1 : (winner || p1)
+    const leftPi = isAllSquare ? pi1 : winnerPi
+    const rightP = isAllSquare ? p2 : (loser || p2)
+    const rightPi = isAllSquare ? pi2 : loserPi
+    return (
+      <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 14px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <PlayerChip name={leftP.name} pi={leftPi} side="left" />
+          <div style={{ fontFamily: 'var(--display)', fontSize: 20, color: match.concluded ? '#f59e0b' : '#2dd4bf', minWidth: 52, textAlign: 'center', flexShrink: 0 }}>{match.status}</div>
+          <PlayerChip name={rightP.name} pi={rightPi} side="right" />
+        </div>
+      </div>
+    )
+  }
+
+  if (stroke) {
+    const s1 = stroke.p1.stableford
+    const s2 = stroke.p2.stableford
+    const leftP = s1 >= s2 ? p1 : p2
+    const leftPi = s1 >= s2 ? pi1 : pi2
+    const rightP = s1 >= s2 ? p2 : p1
+    const rightPi = s1 >= s2 ? pi2 : pi1
+    const leftSb = s1 >= s2 ? s1 : s2
+    const rightSb = s1 >= s2 ? s2 : s1
+    return (
+      <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 14px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <PlayerChip name={leftP.name} pi={leftPi} side="left" />
+          <div style={{ display: 'flex', gap: 10, flexShrink: 0 }}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ color: 'var(--text3)', fontSize: 9 }}>Stbl</div>
+              <div style={{ color: PLAYER_COLORS[leftPi], fontFamily: 'var(--display)', fontSize: 18 }}>{leftSb}</div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ color: 'var(--text3)', fontSize: 9 }}>Stbl</div>
+              <div style={{ color: PLAYER_COLORS[rightPi], fontFamily: 'var(--display)', fontSize: 18 }}>{rightSb}</div>
+            </div>
+          </div>
+          <PlayerChip name={rightP.name} pi={rightPi} side="right" />
+        </div>
+      </div>
+    )
+  }
+
+  return null
 }
 
 export default function RoundPage() {
@@ -238,7 +274,9 @@ export default function RoundPage() {
                             <div style={{ fontSize: 9, color: 'var(--text3)', fontWeight: 400 }}>P{h.par}</div>
                           </th>
                         ))}
-                        <th style={{ width: 52, padding: '6px 8px', fontSize: 11, color: '#2dd4bf', background: 'var(--surface2)', border: '1px solid var(--border)' }}>TOT</th>
+                        <th style={{ width: 52, padding: '6px 8px', fontSize: 11, color: '#2dd4bf', background: 'var(--surface2)', border: '1px solid var(--border)' }}>
+                            {si === (back9.length > 0 ? 1 : 0) ? 'TOTAL' : 'IDA'}
+                          </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -293,77 +331,180 @@ export default function RoundPage() {
         )}
 
         {/* ── SCORE NETO ── */}
-        {activeTab === 'neto' && (
-          <>
-            {[front9, ...(back9.length > 0 ? [back9] : [])].map((holeSet, si) => (
-              <div key={si} style={{ marginBottom: 24 }}>
-                <div style={{ fontFamily: 'var(--display)', fontSize: 13, letterSpacing: 2, color: 'var(--text3)', paddingBottom: 8 }}>
-                  {si === 0 ? 'IDA — HOYOS 1–9' : 'VUELTA — HOYOS 10–18'}
-                </div>
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 500 }}>
-                    <thead>
-                      <tr>
-                        <th style={{ textAlign: 'left', padding: '8px 10px', fontSize: 11, color: 'var(--text3)', letterSpacing: 1, background: 'var(--surface2)', border: '1px solid var(--border)', minWidth: 100 }}>JUGADOR</th>
-                        {holeSet.map(h => (
-                          <th key={h.hole_number} style={{ width: 42, padding: '6px 4px', fontSize: 12, color: 'var(--text3)', background: 'var(--surface2)', border: '1px solid var(--border)' }}>
-                            <div>{h.hole_number}</div>
-                            <div style={{ fontSize: 9, color: 'var(--text3)', fontWeight: 400 }}>V{h.handicap}</div>
-                          </th>
-                        ))}
-                        <th style={{ width: 52, padding: '6px 8px', fontSize: 11, color: '#2dd4bf', background: 'var(--surface2)', border: '1px solid var(--border)' }}>NETO</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {players.map((p, pi) => {
-                        let rowNeto = 0
-                        let hasAll = true
-                        return (
-                          <tr key={p.id}>
-                            <td style={{ padding: '6px 10px', border: '1px solid var(--border)', background: 'var(--surface)' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <div style={{ width: 20, height: 20, borderRadius: '50%', background: PLAYER_BG[pi], display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, color: 'white', flexShrink: 0 }}>{p.name[0]?.toUpperCase()}</div>
-                                <span style={{ fontSize: 12, fontWeight: 500, whiteSpace: 'nowrap' }}>{p.name}</span>
-                              </div>
-                            </td>
-                            {holeSet.map(h => {
-                              const s = getScore(p.id, h.hole_number)
-                              const extra = getExtraStrokes(h.handicap, p.handicap, holes.length, hcpPct)
-                              const neto = s !== null ? s - extra : null
-                              if (neto !== null) rowNeto += neto; else hasAll = false
+        {activeTab === 'neto' && (() => {
+          // pct and strategy depend on mode
+          const isRyder = r.mode === 'combinado_4'
+          const isCombBismarck = r.mode === 'combinado_bismarck'
+          const isStroke = r.mode === 'stroke'
+
+          // Render a net scorecard for a group of players
+          const NetTable = ({ groupPlayers, pct, strategy, title, titleColor }: {
+            groupPlayers: typeof players; pct: number; strategy: 'individual' | 'relative';
+            title?: string; titleColor?: string
+          }) => {
+            const allHcps = groupPlayers.map(p => p.handicap)
+            return (
+              <div style={{ marginBottom: 16 }}>
+                {title && (
+                  <div style={{ fontFamily: 'var(--display)', fontSize: 12, letterSpacing: 2, color: titleColor || 'var(--text3)', paddingBottom: 8, display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <span>{title}</span>
+                    <span style={{ color: 'var(--text3)', fontSize: 11 }}>· HCP {pct}%</span>
+                  </div>
+                )}
+                {[front9, ...(back9.length > 0 ? [back9] : [])].map((holeSet, si) => {
+                  const isLastSet = si === (back9.length > 0 ? 1 : 0)
+                  return (
+                    <div key={si} style={{ marginBottom: 10 }}>
+                      <div style={{ fontSize: 11, color: 'var(--text3)', letterSpacing: 1, paddingBottom: 4 }}>
+                        {si === 0 ? 'IDA — HOYOS 1–9' : 'VUELTA — HOYOS 10–18'}
+                      </div>
+                      <div style={{ overflowX: 'auto' }}>
+                        <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 500 }}>
+                          <thead>
+                            <tr>
+                              <th style={{ textAlign: 'left', padding: '8px 10px', fontSize: 11, color: 'var(--text3)', letterSpacing: 1, background: 'var(--surface2)', border: '1px solid var(--border)', minWidth: 100 }}>JUGADOR</th>
+                              {holeSet.map(h => (
+                                <th key={h.hole_number} style={{ width: 42, padding: '6px 4px', fontSize: 12, color: 'var(--text3)', background: 'var(--surface2)', border: '1px solid var(--border)' }}>
+                                  <div>{h.hole_number}</div>
+                                  <div style={{ fontSize: 9, color: 'var(--text3)', fontWeight: 400 }}>V{h.handicap}</div>
+                                </th>
+                              ))}
+                              <th style={{ width: 52, padding: '6px 8px', fontSize: 11, color: '#2dd4bf', background: 'var(--surface2)', border: '1px solid var(--border)' }}>
+                                {isLastSet ? 'TOTAL' : 'IDA'}
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {groupPlayers.map(p => {
+                              const pi = players.findIndex(pl => pl.id === p.id)
+                              let rowNeto = 0; let hasRow = true
+                              let totalNeto = 0; let hasTotal = true
+                              holes.forEach(h => {
+                                const s = getScore(p.id, h.hole_number)
+                                const extra = strategy === 'individual'
+                                  ? getExtraStrokes(h.handicap, p.handicap, holes.length, pct)
+                                  : getRelativeExtra(h.handicap, p.handicap, allHcps, holes.length, pct)
+                                if (s !== null) totalNeto += s - extra; else hasTotal = false
+                              })
                               return (
-                                <td key={h.hole_number} style={{ padding: 3, border: '1px solid var(--border)', background: 'var(--surface)', textAlign: 'center' }}>
-                                  {neto !== null ? (
-                                    <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 26, height: 26, fontSize: 12, fontWeight: 700,
-                                      background: extra > 0 ? 'rgba(45,212,191,0.15)' : 'var(--surface2)',
-                                      border: extra > 0 ? '1px solid rgba(45,212,191,0.4)' : '1px solid var(--border)',
-                                      borderRadius: 4, position: 'relative'
-                                    }}>
-                                      {neto}
-                                      {extra > 0 && <span style={{ position: 'absolute', top: -4, right: -4, width: 10, height: 10, background: '#2dd4bf', borderRadius: '50%', fontSize: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#051209', fontWeight: 900 }}>{extra}</span>}
+                                <tr key={p.id}>
+                                  <td style={{ padding: '6px 10px', border: '1px solid var(--border)', background: 'var(--surface)' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                      <div style={{ width: 20, height: 20, borderRadius: '50%', background: PLAYER_BG[pi], display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, color: 'white', flexShrink: 0 }}>{p.name[0]?.toUpperCase()}</div>
+                                      <span style={{ fontSize: 12, fontWeight: 500, whiteSpace: 'nowrap' }}>{p.name}</span>
+                                      <span style={{ fontSize: 10, color: 'var(--text3)' }}>HCP {p.handicap}</span>
                                     </div>
-                                  ) : (
-                                    <span style={{ color: 'var(--text3)', fontSize: 13 }}>—</span>
-                                  )}
-                                </td>
+                                  </td>
+                                  {holeSet.map(h => {
+                                    const s = getScore(p.id, h.hole_number)
+                                    const extra = strategy === 'individual'
+                                      ? getExtraStrokes(h.handicap, p.handicap, holes.length, pct)
+                                      : getRelativeExtra(h.handicap, p.handicap, allHcps, holes.length, pct)
+                                    const neto = s !== null ? s - extra : null
+                                    if (neto !== null) rowNeto += neto; else hasRow = false
+                                    return (
+                                      <td key={h.hole_number} style={{ padding: 3, border: '1px solid var(--border)', background: 'var(--surface)', textAlign: 'center' }}>
+                                        {neto !== null ? (
+                                          <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 26, height: 26, fontSize: 12, fontWeight: 700,
+                                            background: extra > 0 ? 'rgba(45,212,191,0.15)' : 'var(--surface2)',
+                                            border: extra > 0 ? '1px solid rgba(45,212,191,0.4)' : '1px solid var(--border)',
+                                            borderRadius: 4, position: 'relative'
+                                          }}>
+                                            {neto}
+                                            {extra > 0 && <span style={{ position: 'absolute', top: -4, right: -4, width: 10, height: 10, background: '#2dd4bf', borderRadius: '50%', fontSize: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#051209', fontWeight: 900 }}>{extra}</span>}
+                                          </div>
+                                        ) : (
+                                          <span style={{ color: 'var(--text3)', fontSize: 13 }}>—</span>
+                                        )}
+                                      </td>
+                                    )
+                                  })}
+                                  <td style={{ padding: '6px 8px', border: '1px solid var(--border)', background: 'var(--surface)', textAlign: 'center', fontWeight: 700, fontSize: 14 }}>
+                                    {isLastSet
+                                      ? (hasTotal ? <span style={{ color: '#2dd4bf' }}>{totalNeto}</span> : '—')
+                                      : (hasRow ? <span style={{ color: PLAYER_COLORS[pi] }}>{rowNeto}</span> : '—')}
+                                  </td>
+                                </tr>
                               )
                             })}
-                            <td style={{ padding: '6px 8px', border: '1px solid var(--border)', background: 'var(--surface)', textAlign: 'center', fontWeight: 700, color: PLAYER_COLORS[pi], fontSize: 14 }}>
-                              {hasAll && rowNeto > 0 ? rowNeto : '—'}
-                            </td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
-            ))}
-            <div style={{ fontSize: 11, color: 'var(--text3)', paddingTop: 4 }}>
-              El punto verde indica que el jugador recibe ventaja en ese hoyo.
-            </div>
-          </>
-        )}
+            )
+          }
+
+          // Ryder: dobles + 4 individuales
+          if (isRyder) {
+            const dPct = (r as any).dobles_hcp_pct ?? 100
+            const dMode = (r as any).dobles_mode || 'matchplay'
+            const iPct = (r as any).individual_hcp_pct ?? 80
+            const iMode = (r as any).individual_mode || 'matchplay'
+            const team1 = players.filter(p => p.team === 1)
+            const team2 = players.filter(p => p.team === 2)
+            const pairs = [
+              [team1[0], team2[0]], [team1[0], team2[1]],
+              [team1[1], team2[0]], [team1[1], team2[1]],
+            ].filter(pair => pair[0] && pair[1])
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ background: 'var(--surface)', border: '1px solid #34d39920', borderRadius: 12, padding: '14px 14px 4px' }}>
+                  <NetTable title={`DOBLES — ${dMode === 'stroke' ? 'STROKE' : 'MATCH PLAY'}`} titleColor="#34d399"
+                    groupPlayers={players} pct={dPct} strategy={dMode === 'stroke' ? 'individual' : 'relative'} />
+                </div>
+                {pairs.map(([p1, p2], idx) => {
+                  const pi1 = players.findIndex(p => p.id === p1.id)
+                  return (
+                    <div key={idx} style={{ background: 'var(--surface)', border: '1px solid #f59e0b20', borderRadius: 12, padding: '14px 14px 4px' }}>
+                      <NetTable title={`${p1.name} vs ${p2.name} — ${iMode === 'stroke' ? 'STROKE' : 'MATCH PLAY'}`}
+                        titleColor={PLAYER_COLORS[pi1]} groupPlayers={[p1, p2]} pct={iPct}
+                        strategy={iMode === 'stroke' ? 'individual' : 'relative'} />
+                    </div>
+                  )
+                })}
+                <div style={{ fontSize: 11, color: 'var(--text3)', paddingTop: 4 }}>El punto verde indica ventaja en ese hoyo.</div>
+              </div>
+            )
+          }
+
+          // Bismarck + Individuales
+          if (isCombBismarck) {
+            const bPct = (r as any).bismarck_hcp_pct ?? 100
+            const iPct = (r as any).individual_hcp_pct ?? 80
+            const iMode = (r as any).individual_mode || 'matchplay'
+            const pairs = [[players[0], players[1]], [players[0], players[2]], [players[1], players[2]]]
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ background: 'var(--surface)', border: '1px solid #f8717120', borderRadius: 12, padding: '14px 14px 4px' }}>
+                  <NetTable title="BISMARCK" titleColor="#f87171" groupPlayers={players} pct={bPct} strategy="relative" />
+                </div>
+                {pairs.map(([p1, p2], idx) => {
+                  const pi1 = players.findIndex(p => p.id === p1.id)
+                  return (
+                    <div key={idx} style={{ background: 'var(--surface)', border: '1px solid #f59e0b20', borderRadius: 12, padding: '14px 14px 4px' }}>
+                      <NetTable title={`${p1.name} vs ${p2.name} — ${iMode === 'stroke' ? 'STROKE' : 'MATCH PLAY'}`}
+                        titleColor={PLAYER_COLORS[pi1]} groupPlayers={[p1, p2]} pct={iPct}
+                        strategy={iMode === 'stroke' ? 'individual' : 'relative'} />
+                    </div>
+                  )
+                })}
+                <div style={{ fontSize: 11, color: 'var(--text3)', paddingTop: 4 }}>El punto verde indica ventaja en ese hoyo.</div>
+              </div>
+            )
+          }
+
+          // Modos simples
+          const simpleStrategy = isStroke ? 'individual' : 'relative'
+          return (
+            <>
+              <NetTable groupPlayers={players} pct={hcpPct} strategy={simpleStrategy} />
+              <div style={{ fontSize: 11, color: 'var(--text3)', paddingTop: 4 }}>El punto verde indica ventaja en ese hoyo.</div>
+            </>
+          )
+        })()}
 
         {/* ── RESULTADOS ── */}
         {activeTab === 'results' && (
@@ -409,17 +550,28 @@ export default function RoundPage() {
             )}
 
             {/* MATCH PLAY INDIVIDUAL */}
-            {r.mode === 'matchplay_individual' && matchResult && (
+            {r.mode === 'matchplay_individual' && matchResult && (() => {
+              const winner = matchResult.concluded && matchResult.leaderId
+                ? players.find(p => p.id === matchResult.leaderId) : null
+              const loser = winner ? players.find(p => p.id !== winner.id) : null
+              const leftP = winner || players[0]
+              const rightP = loser || players[1]
+              const leftPi = players.findIndex(p => p.id === leftP?.id)
+              const rightPi = players.findIndex(p => p.id === rightP?.id)
+              return (
               <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
                 <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontFamily: 'var(--display)', fontSize: 14, letterSpacing: 2, color: 'var(--text3)' }}>MATCH PLAY INDIVIDUAL</div>
-                <div style={{ padding: '16px 16px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
-                  {players.slice(0, 2).map((p, i) => (
-                    <div key={p.id} style={{ textAlign: 'center' }}>
-                      <div style={{ width: 44, height: 44, borderRadius: '50%', background: PLAYER_BG[i], display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700, color: 'white', margin: '0 auto 8px' }}>{p.name[0]?.toUpperCase()}</div>
-                      <div style={{ fontWeight: 600, color: matchResult.leaderId === p.id ? PLAYER_COLORS[i] : 'var(--text2)', fontSize: 14 }}>{p.name}</div>
-                      <div style={{ fontSize: 11, color: 'var(--text3)' }}>HCP {p.handicap}</div>
-                    </div>
-                  ))}
+                <div style={{ padding: '16px 16px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                  {[leftP, rightP].map((p, i) => {
+                    const pi = i === 0 ? leftPi : rightPi
+                    return p ? (
+                      <div key={p.id} style={{ textAlign: 'center', flex: 1 }}>
+                        <div style={{ width: 44, height: 44, borderRadius: '50%', background: PLAYER_BG[pi], display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700, color: 'white', margin: '0 auto 8px' }}>{p.name[0]?.toUpperCase()}</div>
+                        <div style={{ fontWeight: 600, color: p.id === matchResult.leaderId ? PLAYER_COLORS[pi] : 'var(--text2)', fontSize: 14 }}>{p.name}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text3)' }}>HCP {p.handicap}</div>
+                      </div>
+                    ) : null
+                  })}
                   <MatchStatusBadge status={matchResult.status} concluded={matchResult.concluded} label={matchResult.concluded ? '🏆 Terminado' : `${matchResult.holeResults.length} hoyos`} />
                 </div>
                 <div style={{ borderTop: '1px solid var(--border)', padding: '10px 16px', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -441,15 +593,20 @@ export default function RoundPage() {
                   })}
                 </div>
               </div>
-            )}
+              )
+            })()}
 
             {/* MATCH PLAY DOBLES */}
-            {r.mode === 'matchplay_dobles' && doublesResult && (
+            {r.mode === 'matchplay_dobles' && doublesResult && (() => {
+              const winnerTeam = doublesResult.concluded ? doublesResult.leadingTeam : null
+              const leftTeam = winnerTeam || 1
+              const rightTeam = leftTeam === 1 ? 2 : 1
+              return (
               <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
                 <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontFamily: 'var(--display)', fontSize: 14, letterSpacing: 2, color: 'var(--text3)' }}>MATCH PLAY DOBLES</div>
-                <div style={{ padding: '16px 16px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
-                  {[1, 2].map(t => (
-                    <div key={t} style={{ textAlign: 'center' }}>
+                <div style={{ padding: '16px 16px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                  {[leftTeam, rightTeam].map(t => (
+                    <div key={t} style={{ textAlign: 'center', flex: 1 }}>
                       <div style={{ fontSize: 12, fontWeight: 600, color: doublesResult.leadingTeam === t ? PLAYER_COLORS[t === 1 ? 0 : 2] : 'var(--text2)', marginBottom: 4 }}>TEAM {t}</div>
                       {players.filter(p => p.team === t).map(p => <div key={p.id} style={{ fontSize: 13, color: 'var(--text3)' }}>{p.name}</div>)}
                     </div>
@@ -475,7 +632,8 @@ export default function RoundPage() {
                   })}
                 </div>
               </div>
-            )}
+              )
+            })()}
 
             {/* BISMARCK */}
             {r.mode === 'bismarck' && bismarckResult && (
@@ -505,12 +663,17 @@ export default function RoundPage() {
                     DOBLES — {((r as any).dobles_mode === 'stroke' ? 'STROKE' : 'MATCH PLAY')} · HCP {(r as any).dobles_hcp_pct}%
                   </div>
                   <div style={{ padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    {[1, 2].map(t => (
-                      <div key={t} style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: PLAYER_COLORS[t === 1 ? 0 : 2], marginBottom: 4 }}>TEAM {t}</div>
-                        {players.filter(p => p.team === t).map(p => <div key={p.id} style={{ fontSize: 13, color: 'var(--text3)' }}>{p.name}</div>)}
-                      </div>
-                    ))}
+                    {(() => {
+                      const winnerTeam = combinado4Result.dobles?.concluded ? combinado4Result.dobles.leadingTeam : null
+                      const leftTeam = winnerTeam || 1
+                      const rightTeam = leftTeam === 1 ? 2 : 1
+                      return [leftTeam, rightTeam].map(t => (
+                        <div key={t} style={{ textAlign: 'center' }}>
+                          <div style={{ fontSize: 12, fontWeight: 600, color: PLAYER_COLORS[t === 1 ? 0 : 2], marginBottom: 4 }}>TEAM {t}</div>
+                          {players.filter(p => p.team === t).map(p => <div key={p.id} style={{ fontSize: 13, color: 'var(--text3)' }}>{p.name}</div>)}
+                        </div>
+                      ))
+                    })()}
                     {combinado4Result.dobles && (
                       <MatchStatusBadge status={combinado4Result.dobles.status} concluded={combinado4Result.dobles.concluded} label={combinado4Result.dobles.concluded ? '🏆 Terminado' : 'En juego'} />
                     )}
