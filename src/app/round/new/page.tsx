@@ -59,60 +59,9 @@ function ModeSelector({ value, onChange, label }: { value: 'stroke' | 'matchplay
   )
 }
 
-// Componente selector de jugador simple (campo libre)
-function PlayerSelector({
-  index, player, allPlayers, registeredPlayers, onUpdate, onRemove, showRemove, showTeam
-}: {
-  index: number
-  player: { name: string; handicap: number; team: number }
-  allPlayers: { name: string; handicap: number; team: number }[]
-  registeredPlayers: Player[]
-  onUpdate: (field: string, val: any) => void
-  onRemove: () => void
-  showRemove: boolean
-  showTeam: boolean
-}) {
-  return (
-    <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '12px 14px', borderRadius: 10, background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)' }}>
-      <div style={{ width: 32, height: 32, borderRadius: '50%', background: PLAYER_BG[index], display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 12, color: 'white', flexShrink: 0, marginTop: 18 }}>
-        {showTeam ? `T${player.team}` : (index + 1)}
-      </div>
-
-      <div style={{ flex: 1 }}>
-        <label style={{ fontSize: 10, color: 'var(--text3)', letterSpacing: 1, display: 'block', marginBottom: 4 }}>NOMBRE</label>
-        <div style={{ position: 'relative' }}>
-          <input
-            value={player.name}
-            onChange={e => onUpdate('name', e.target.value)}
-            placeholder="Nombre del jugador..."
-            style={{ ...inp, padding: '7px 10px' }}
-          />
-        </div>
-      </div>
-
-      <div style={{ width: 70 }}>
-        <label style={{ fontSize: 10, color: 'var(--text3)', letterSpacing: 1, display: 'block', marginBottom: 4 }}>HCP</label>
-        <input type="number" min={0} max={54} value={player.handicap}
-          onChange={e => onUpdate('handicap', parseInt(e.target.value) || 0)}
-          onFocus={e => e.target.select()}
-          style={{ ...inp, padding: '7px 10px' }} />
-      </div>
-
-      {showRemove && (
-        <button onClick={onRemove} style={{
-          background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.2)',
-          color: '#f87171', borderRadius: 6, padding: '7px 10px',
-          cursor: 'pointer', fontSize: 13, flexShrink: 0, marginTop: 18
-        }}>✕</button>
-      )}
-    </div>
-  )
-}
-
 export default function NewRound() {
   const router = useRouter()
   const [courses, setCourses] = useState<Course[]>([])
-  const [registeredPlayers, setRegisteredPlayers] = useState<Player[]>([])
   const [courseId, setCourseId] = useState('')
   const [mode, setMode] = useState<GameMode>('stroke')
   const [holesPlayed, setHolesPlayed] = useState(18)
@@ -125,20 +74,18 @@ export default function NewRound() {
   const [doblesMode, setDoblesMode] = useState<'stroke' | 'matchplay'>('matchplay')
   const [doblesHcpPct, setDoblesHcpPct] = useState(100)
   const [individualMode, setIndividualMode] = useState<'stroke' | 'matchplay'>('matchplay')
-  const [individualHcpPct, setIndividualHcpPct] = useState(80)
+  const [individualHcpPct, setIndividualHcpPct] = useState(100)
   const [bismarckHcpPct, setBismarckHcpPct] = useState(100)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    Promise.all([
-      supabase.from('courses').select('*, holes(*)').order('name'),
-      supabase.from('players').select('*').order('name')
-    ]).then(([{ data: c }, { data: p }]) => {
+    supabase.from('courses').select('*, holes(*)').order('name').then(({ data: c }) => {
       setCourses((c || []) as any)
-      setRegisteredPlayers((p || []) as any)
       if (c && c.length > 0) { setCourseId(c[0].id); setHolesPlayed((c[0] as any).holes_count || 18) }
     })
   }, [])
+
+  const isStroke = mode === 'stroke'
 
   // Fixed player counts per mode
   const fixedCount: Record<GameMode, number | null> = {
@@ -175,23 +122,16 @@ export default function NewRound() {
 
   const isValid = () => {
     if (!courseId) return false
-    if (players.some(p => !p.name.trim())) return false
-    if (mode === 'combinado_4' && players.length !== 4) return false
-    if ((mode === 'bismarck' || mode === 'combinado_bismarck') && players.length !== 3) return false
-    if (mode === 'matchplay_individual' && players.length !== 2) return false
-    if (mode === 'matchplay_dobles' && players.length !== 4) return false
-    return true
+    const needed = fixedCount[mode]
+    if (needed !== null && players.length !== needed) return false
+    return players.every(p => p.name.trim())
   }
 
   const handleStart = async () => {
-    if (!isValid()) return
+    if (!isValid() || saving) return
     setSaving(true)
-
     const roundData: any = { course_id: courseId, mode, holes_played: holesPlayed, date }
-    // Modalidades simples: guardar hcp_pct
-    if (['stroke', 'matchplay_individual', 'matchplay_dobles', 'bismarck'].includes(mode)) {
-      roundData.hcp_pct = hcpPct
-    }
+    if (['stroke', 'matchplay_individual', 'matchplay_dobles', 'bismarck'].includes(mode)) roundData.hcp_pct = hcpPct
     if (mode === 'combinado_4') {
       roundData.dobles_mode = doblesMode; roundData.dobles_hcp_pct = doblesHcpPct
       roundData.individual_mode = individualMode; roundData.individual_hcp_pct = individualHcpPct
@@ -200,40 +140,29 @@ export default function NewRound() {
       roundData.bismarck_hcp_pct = bismarckHcpPct
       roundData.individual_mode = individualMode; roundData.individual_hcp_pct = individualHcpPct
     }
-
     const { data: round, error } = await supabase.from('rounds').insert(roundData).select().single()
-    if (error || !round) { setSaving(false); alert('Error: ' + error?.message); return }
-
-    await supabase.from('round_players').insert(
-      players.map((p, i) => ({
-        round_id: round.id, name: p.name.trim(), handicap: p.handicap,
-        team: ['matchplay_dobles', 'combinado_4'].includes(mode) ? p.team : null,
-        position: i + 1
-      }))
-    )
-
-    // Upsert players into master list with latest handicap
-    await Promise.all(players.map(p =>
-      supabase.from('players').upsert({ name: p.name.trim(), last_handicap: p.handicap }, { onConflict: 'name' })
-    ))
-
+    if (error || !round) { setSaving(false); return }
+    for (let i = 0; i < players.length; i++) {
+      const p = players[i]
+      await supabase.from('round_players').insert({ round_id: round.id, name: p.name.trim(), handicap: p.handicap, position: i, team: p.team })
+      // Upsert in players table
+      await supabase.from('players').upsert({ name: p.name.trim(), last_handicap: p.handicap }, { onConflict: 'name' })
+    }
     router.push(`/round/${round.id}`)
   }
 
-  const isStroke = mode === 'stroke'
-
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-      <header style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '20px 20px 16px' }}>
+      <header style={{ background: 'linear-gradient(135deg, #0a1f0f 0%, #071409 100%)', borderBottom: '1px solid var(--border)', padding: '18px 16px 14px' }}>
         <div style={{ maxWidth: 640, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 12 }}>
-          <Link href="/" style={{ color: 'var(--text3)', fontSize: 20 }}>←</Link>
+          <Link href="/" style={{ color: 'var(--text3)', fontSize: 18 }}>←</Link>
           <h1 style={{ fontFamily: 'var(--display)', fontSize: 26, letterSpacing: 2 }}>NUEVA PARTIDA</h1>
         </div>
       </header>
 
       <main style={{ maxWidth: 640, margin: '0 auto', padding: '24px 16px', display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-        {/* Campo */}
+        {/* 1. CAMPO */}
         <section style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
           <h2 style={{ fontFamily: 'var(--display)', fontSize: 14, letterSpacing: 2, color: 'var(--text3)', marginBottom: 14 }}>CAMPO</h2>
           {courses.length === 0 ? (
@@ -272,7 +201,7 @@ export default function NewRound() {
           )}
         </section>
 
-        {/* Modalidad */}
+        {/* 2. MODALIDAD */}
         <section style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
           <h2 style={{ fontFamily: 'var(--display)', fontSize: 14, letterSpacing: 2, color: 'var(--text3)', marginBottom: 14 }}>MODALIDAD</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -292,7 +221,80 @@ export default function NewRound() {
           </div>
         </section>
 
-        {/* % Handicap para modalidades simples */}
+        {/* 3. JUGADORES — solo nombres, sin HCP aquí */}
+        <section style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <h2 style={{ fontFamily: 'var(--display)', fontSize: 14, letterSpacing: 2, color: 'var(--text3)' }}>JUGADORES</h2>
+            {isStroke && players.length < 4 && (
+              <button onClick={addPlayer} style={{
+                background: 'transparent', border: '1px solid var(--border2)',
+                borderRadius: 6, color: 'var(--text2)', padding: '5px 12px', fontSize: 13, cursor: 'pointer'
+              }}>＋ Agregar</button>
+            )}
+          </div>
+
+          {(mode === 'combinado_4' || mode === 'matchplay_dobles') && (
+            <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+              {[1, 2].map(t => (
+                <div key={t} style={{ flex: 1, padding: '8px 12px', borderRadius: 8, background: `${PLAYER_COLORS[t === 1 ? 0 : 2]}10`, border: `1px solid ${PLAYER_COLORS[t === 1 ? 0 : 2]}30`, fontSize: 12, color: PLAYER_COLORS[t === 1 ? 0 : 2] }}>
+                  <strong>Team {t}:</strong> {players.filter(p => p.team === t).map(p => p.name || '…').join(' & ') || '—'}
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {players.map((p, i) => (
+              <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '10px 14px', borderRadius: 10, background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)' }}>
+                <div style={{ width: 32, height: 32, borderRadius: '50%', background: PLAYER_BG[i], display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 12, color: 'white', flexShrink: 0 }}>
+                  {(mode === 'combinado_4' || mode === 'matchplay_dobles') ? `T${p.team}` : (i + 1)}
+                </div>
+                <input
+                  value={p.name}
+                  onChange={e => updatePlayer(i, 'name', e.target.value)}
+                  placeholder="Nombre del jugador..."
+                  style={{ ...inp, padding: '8px 12px', flex: 1 }}
+                />
+                {isStroke && players.length > 1 && (
+                  <button onClick={() => removePlayer(i)} style={{
+                    background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.2)',
+                    color: '#f87171', borderRadius: 6, padding: '7px 10px',
+                    cursor: 'pointer', fontSize: 13, flexShrink: 0
+                  }}>✕</button>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* 4. HANDICAP individual por jugador */}
+        <section style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
+          <h2 style={{ fontFamily: 'var(--display)', fontSize: 14, letterSpacing: 2, color: 'var(--text3)', marginBottom: 14 }}>HANDICAP</h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {players.map((p, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)' }}>
+                <div style={{ width: 28, height: 28, borderRadius: '50%', background: PLAYER_BG[i], display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 11, color: 'white', flexShrink: 0 }}>
+                  {p.name ? p.name[0].toUpperCase() : (i + 1)}
+                </div>
+                <span style={{ flex: 1, fontSize: 14, color: p.name ? PLAYER_COLORS[i] : 'var(--text3)', fontWeight: p.name ? 600 : 400 }}>
+                  {p.name || `Jugador ${i + 1}`}
+                </span>
+                <label style={{ fontSize: 11, color: 'var(--text3)', letterSpacing: 1, marginRight: 6 }}>HCP</label>
+                <input
+                  type="number" min={0} max={54}
+                  value={p.handicap}
+                  onChange={e => updatePlayer(i, 'handicap', parseInt(e.target.value) || 0)}
+                  onFocus={e => e.target.select()}
+                  style={{ ...inp, width: 64, padding: '7px 10px', textAlign: 'center' }}
+                />
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* 5. % HANDICAP */}
+
+        {/* Modalidades simples */}
         {['stroke', 'matchplay_individual', 'matchplay_dobles', 'bismarck'].includes(mode) && (
           <section style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
             <h2 style={{ fontFamily: 'var(--display)', fontSize: 14, letterSpacing: 2, color: 'var(--text3)', marginBottom: 14 }}>% HANDICAP</h2>
@@ -300,10 +302,10 @@ export default function NewRound() {
           </section>
         )}
 
-        {/* Config combinado 4 */}
+        {/* Config combinado 4 (Ryder) */}
         {mode === 'combinado_4' && (
           <section style={{ background: 'var(--surface)', border: '1px solid #34d39930', borderRadius: 12, padding: 20 }}>
-            <h2 style={{ fontFamily: 'var(--display)', fontSize: 14, letterSpacing: 2, color: '#34d399', marginBottom: 16 }}>CONFIGURACIÓN APUESTAS</h2>
+            <h2 style={{ fontFamily: 'var(--display)', fontSize: 14, letterSpacing: 2, color: '#34d399', marginBottom: 16 }}>% HANDICAP POR APUESTA</h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div style={{ padding: 14, background: 'rgba(52,211,153,0.05)', borderRadius: 10, border: '1px solid #34d39920' }}>
                 <div style={{ fontSize: 13, fontWeight: 600, color: '#34d399', marginBottom: 10 }}>Dobles (T1 vs T2)</div>
@@ -332,7 +334,7 @@ export default function NewRound() {
         {/* Config combinado bismarck */}
         {mode === 'combinado_bismarck' && (
           <section style={{ background: 'var(--surface)', border: '1px solid #fb923c30', borderRadius: 12, padding: 20 }}>
-            <h2 style={{ fontFamily: 'var(--display)', fontSize: 14, letterSpacing: 2, color: '#fb923c', marginBottom: 16 }}>CONFIGURACIÓN APUESTAS</h2>
+            <h2 style={{ fontFamily: 'var(--display)', fontSize: 14, letterSpacing: 2, color: '#fb923c', marginBottom: 16 }}>% HANDICAP POR APUESTA</h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div style={{ padding: 14, background: 'rgba(248,113,113,0.05)', borderRadius: 10, border: '1px solid #f8717120' }}>
                 <div style={{ fontSize: 13, fontWeight: 600, color: '#f87171', marginBottom: 10 }}>Bismarck</div>
@@ -354,43 +356,6 @@ export default function NewRound() {
             </div>
           </section>
         )}
-
-        {/* Jugadores */}
-        <section style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-            <h2 style={{ fontFamily: 'var(--display)', fontSize: 14, letterSpacing: 2, color: 'var(--text3)' }}>JUGADORES</h2>
-            {isStroke && players.length < 4 && (
-              <button onClick={addPlayer} style={{
-                background: 'transparent', border: '1px solid var(--border2)',
-                borderRadius: 6, color: 'var(--text2)', padding: '5px 12px', fontSize: 13, cursor: 'pointer'
-              }}>＋ Agregar</button>
-            )}
-          </div>
-
-          {(mode === 'combinado_4' || mode === 'matchplay_dobles') && (
-            <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
-              {[1, 2].map(t => (
-                <div key={t} style={{ flex: 1, padding: '8px 12px', borderRadius: 8, background: `${PLAYER_COLORS[t === 1 ? 0 : 2]}10`, border: `1px solid ${PLAYER_COLORS[t === 1 ? 0 : 2]}30`, fontSize: 12, color: PLAYER_COLORS[t === 1 ? 0 : 2] }}>
-                  <strong>Team {t}:</strong> {players.filter(p => p.team === t).map(p => p.name || '…').join(' & ') || '—'}
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {players.map((p, i) => (
-              <PlayerSelector
-                key={i} index={i} player={p}
-                allPlayers={players}
-                registeredPlayers={registeredPlayers}
-                onUpdate={(field, val) => updatePlayer(i, field, val)}
-                onRemove={() => removePlayer(i)}
-                showRemove={isStroke && players.length > 1}
-                showTeam={mode === 'combinado_4' || mode === 'matchplay_dobles'}
-              />
-            ))}
-          </div>
-        </section>
 
         <button onClick={handleStart} disabled={!isValid() || saving} style={{
           width: '100%', padding: 16,
