@@ -128,6 +128,9 @@ export default function RoundPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [deleteCode, setDeleteCode] = useState<string | null>(null)
+  const [deleteInput, setDeleteInput] = useState('')
+  const [deleteError, setDeleteError] = useState(false)
 
   useEffect(() => {
     if (!id) return
@@ -167,8 +170,24 @@ export default function RoundPage() {
     setSaving(null)
   }
 
-  const handleDelete = async () => {
-    if (!confirm('¿Eliminar esta partida? Esta acción no se puede deshacer.')) return
+  const initiateDelete = () => {
+    const code = Math.floor(1000 + Math.random() * 9000).toString()
+    setDeleteCode(code)
+    setDeleteInput('')
+    setDeleteError(false)
+  }
+
+  const cancelDelete = () => {
+    setDeleteCode(null)
+    setDeleteInput('')
+    setDeleteError(false)
+  }
+
+  const confirmDelete = async () => {
+    if (deleteInput !== deleteCode) {
+      setDeleteError(true)
+      return
+    }
     setDeleting(true)
     await supabase.from('rounds').delete().eq('id', id)
     router.push('/')
@@ -219,12 +238,20 @@ export default function RoundPage() {
               </div>
             </div>
             {saving && <div style={{ marginLeft: 'auto', fontSize: 11, color: '#2dd4bf' }}>💾</div>}
-            <button onClick={handleDelete} disabled={deleting} style={{
-              marginLeft: 'auto', background: 'rgba(248,113,113,0.1)',
-              border: '1px solid rgba(248,113,113,0.2)', color: '#f87171',
-              borderRadius: 8, padding: '6px 12px', fontSize: 12,
-              cursor: 'pointer', flexShrink: 0
-            }}>🗑 Borrar</button>
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, flexShrink: 0 }}>
+              <Link href={`/round/${id}/edit`} style={{
+                background: 'rgba(245,158,11,0.1)',
+                border: '1px solid rgba(245,158,11,0.25)', color: '#f59e0b',
+                borderRadius: 8, padding: '6px 12px', fontSize: 12,
+                textDecoration: 'none'
+              }}>✎ Editar</Link>
+              <button onClick={initiateDelete} disabled={deleting} style={{
+                background: 'rgba(248,113,113,0.1)',
+                border: '1px solid rgba(248,113,113,0.2)', color: '#f87171',
+                borderRadius: 8, padding: '6px 12px', fontSize: 12,
+                cursor: 'pointer'
+              }}>🗑 Borrar</button>
+            </div>
           </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
             {players.map((p, i) => (
@@ -258,7 +285,10 @@ export default function RoundPage() {
         {/* ── GROSS (tarjeta bruta) ── */}
         {activeTab === 'card' && (
           <>
-            {[front9, ...(back9.length > 0 ? [back9] : [])].map((holeSet, si) => (
+            {[front9, ...(back9.length > 0 ? [back9] : [])].map((holeSet, si) => {
+              const isBack = back9.length > 0 && si === 1
+              const setLabel = isBack ? 'VUELTA' : 'IDA'
+              return (
               <div key={si} style={{ marginBottom: 24 }}>
                 <div style={{ fontFamily: 'var(--display)', fontSize: 13, letterSpacing: 2, color: 'var(--text3)', paddingBottom: 8 }}>
                   {si === 0 ? 'IDA — HOYOS 1–9' : 'VUELTA — HOYOS 10–18'}
@@ -275,13 +305,19 @@ export default function RoundPage() {
                           </th>
                         ))}
                         <th style={{ width: 52, padding: '6px 8px', fontSize: 11, color: '#2dd4bf', background: 'var(--surface2)', border: '1px solid var(--border)' }}>
-                            {si === (back9.length > 0 ? 1 : 0) ? 'TOTAL' : 'IDA'}
+                          {setLabel}
+                        </th>
+                        {isBack && (
+                          <th style={{ width: 56, padding: '6px 8px', fontSize: 11, color: '#fbbf24', background: 'var(--surface2)', border: '1px solid var(--border)' }}>
+                            TOTAL
                           </th>
+                        )}
                       </tr>
                     </thead>
                     <tbody>
                       {players.map((p, pi) => {
-                        const rowTotal = holeSet.reduce((s, h) => s + (getScore(p.id, h.hole_number) || 0), 0)
+                        const setSum = holeSet.reduce((s, h) => s + (getScore(p.id, h.hole_number) || 0), 0)
+                        const totalSum = holes.reduce((s, h) => s + (getScore(p.id, h.hole_number) || 0), 0)
                         return (
                           <tr key={p.id}>
                             <td style={{ padding: '6px 10px', border: '1px solid var(--border)', background: 'var(--surface)' }}>
@@ -305,8 +341,13 @@ export default function RoundPage() {
                               )
                             })}
                             <td style={{ padding: '6px 8px', border: '1px solid var(--border)', background: 'var(--surface)', textAlign: 'center', fontWeight: 700, color: PLAYER_COLORS[pi], fontSize: 14 }}>
-                              {rowTotal > 0 ? rowTotal : '—'}
+                              {setSum > 0 ? setSum : '—'}
                             </td>
+                            {isBack && (
+                              <td style={{ padding: '6px 8px', border: '1px solid var(--border)', background: 'var(--surface)', textAlign: 'center', fontWeight: 700, color: '#fbbf24', fontSize: 14 }}>
+                                {totalSum > 0 ? totalSum : '—'}
+                              </td>
+                            )}
                           </tr>
                         )
                       })}
@@ -314,7 +355,8 @@ export default function RoundPage() {
                   </table>
                 </div>
               </div>
-            ))}
+              )
+            })}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, paddingTop: 8 }}>
               {[
                 { label: 'Eagle', bg: '#fbbf24', r: '50%' }, { label: 'Birdie', bg: '#2dd4bf', r: 4 },
@@ -337,12 +379,120 @@ export default function RoundPage() {
           const isCombBismarck = r.mode === 'combinado_bismarck'
           const isStroke = r.mode === 'stroke'
 
+          // Compute running match-play status per hole (from groupPlayers[0] perspective).
+          // Stops emitting once the match is mathematically concluded.
+          const computeIndivStatuses = (p1: typeof players[0], p2: typeof players[0], pct: number): (number | null)[] => {
+            const allHcps = [p1.handicap, p2.handicap]
+            let running = 0
+            let concluded = false
+            return holes.map((h, i) => {
+              if (concluded) return null
+              const s1 = getScore(p1.id, h.hole_number)
+              const s2 = getScore(p2.id, h.hole_number)
+              if (s1 === null || s2 === null) return null
+              const e1 = getRelativeExtra(h.handicap, p1.handicap, allHcps, holes.length, pct)
+              const e2 = getRelativeExtra(h.handicap, p2.handicap, allHcps, holes.length, pct)
+              const n1 = s1 - e1, n2 = s2 - e2
+              if (n1 < n2) running++
+              else if (n2 < n1) running--
+              if (Math.abs(running) > holes.length - i - 1) concluded = true
+              return running
+            })
+          }
+
+          // Compute team best-ball net per hole + running team1-perspective status
+          const computeDoublesData = (team1Players: typeof players, team2Players: typeof players, pct: number) => {
+            const allHcps = players.map(p => p.handicap)
+            const bestBall = (team: typeof players, h: Hole) => {
+              let best = Infinity
+              team.forEach(p => {
+                const s = getScore(p.id, h.hole_number)
+                if (s !== null) {
+                  const extra = getRelativeExtra(h.handicap, p.handicap, allHcps, holes.length, pct)
+                  const n = s - extra
+                  if (n < best) best = n
+                }
+              })
+              return best === Infinity ? null : best
+            }
+            let running = 0
+            let concluded = false
+            const perHole = holes.map((h, i) => {
+              const b1 = bestBall(team1Players, h)
+              const b2 = bestBall(team2Players, h)
+              let status: number | null = null
+              if (!concluded && b1 !== null && b2 !== null) {
+                if (b1 < b2) running++
+                else if (b2 < b1) running--
+                status = running
+                if (Math.abs(running) > holes.length - i - 1) concluded = true
+              }
+              return { hole: h.hole_number, b1, b2, status }
+            })
+            return perHole
+          }
+
+          // ── Status row renderer (reused by NetTable & DoublesNetTable) ──
+          const renderStatusRow = (
+            holeSet: typeof holes,
+            statuses: (number | null)[],
+            label: string,
+            color: string,
+            isBack: boolean
+          ) => {
+            const lastInSet = (() => {
+              // find the last non-null status that falls inside holeSet
+              let v: number | null = null
+              holeSet.forEach(h => {
+                const idx = holes.findIndex(x => x.hole_number === h.hole_number)
+                if (idx >= 0 && statuses[idx] !== null) v = statuses[idx]
+              })
+              return v
+            })()
+            const lastOverall = (() => {
+              let v: number | null = null
+              statuses.forEach(s => { if (s !== null) v = s })
+              return v
+            })()
+            const colorize = (n: number | null) =>
+              n === null ? 'var(--text3)' : n > 0 ? '#2dd4bf' : n < 0 ? '#f87171' : 'var(--text)'
+            const fmt = (n: number | null) => n === null ? '—' : n > 0 ? `+${n}` : `${n}`
+            return (
+              <tr>
+                <td style={{ padding: '6px 10px', border: '1px solid var(--border)', background: 'var(--surface2)' }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color, letterSpacing: 1 }}>{label}</span>
+                </td>
+                {holeSet.map(h => {
+                  const idx = holes.findIndex(x => x.hole_number === h.hole_number)
+                  const s = idx >= 0 ? statuses[idx] : null
+                  return (
+                    <td key={h.hole_number} style={{ padding: 3, border: '1px solid var(--border)', background: 'var(--surface2)', textAlign: 'center' }}>
+                      <span style={{ fontFamily: 'var(--display)', fontSize: 13, color: colorize(s), fontWeight: 700 }}>{fmt(s)}</span>
+                    </td>
+                  )
+                })}
+                <td style={{ padding: '6px 8px', border: '1px solid var(--border)', background: 'var(--surface2)', textAlign: 'center', fontFamily: 'var(--display)', fontSize: 14, fontWeight: 700, color: colorize(lastInSet) }}>
+                  {fmt(lastInSet)}
+                </td>
+                {isBack && (
+                  <td style={{ padding: '6px 8px', border: '1px solid var(--border)', background: 'var(--surface2)', textAlign: 'center', fontFamily: 'var(--display)', fontSize: 14, fontWeight: 700, color: colorize(lastOverall) }}>
+                    {fmt(lastOverall)}
+                  </td>
+                )}
+              </tr>
+            )
+          }
+
           // Render a net scorecard for a group of players
-          const NetTable = ({ groupPlayers, pct, strategy, title, titleColor }: {
+          const NetTable = ({ groupPlayers, pct, strategy, title, titleColor, matchPlay }: {
             groupPlayers: typeof players; pct: number; strategy: 'individual' | 'relative';
-            title?: string; titleColor?: string
+            title?: string; titleColor?: string;
+            matchPlay?: boolean
           }) => {
             const allHcps = groupPlayers.map(p => p.handicap)
+            const showStatus = matchPlay === true && groupPlayers.length === 2
+            const statuses = showStatus ? computeIndivStatuses(groupPlayers[0], groupPlayers[1], pct) : null
+            const p1pi = showStatus ? players.findIndex(pl => pl.id === groupPlayers[0].id) : -1
             return (
               <div style={{ marginBottom: 16 }}>
                 {title && (
@@ -352,7 +502,8 @@ export default function RoundPage() {
                   </div>
                 )}
                 {[front9, ...(back9.length > 0 ? [back9] : [])].map((holeSet, si) => {
-                  const isLastSet = si === (back9.length > 0 ? 1 : 0)
+                  const isBack = back9.length > 0 && si === 1
+                  const setLabel = isBack ? 'VUELTA' : 'IDA'
                   return (
                     <div key={si} style={{ marginBottom: 10 }}>
                       <div style={{ fontSize: 11, color: 'var(--text3)', letterSpacing: 1, paddingBottom: 4 }}>
@@ -370,8 +521,13 @@ export default function RoundPage() {
                                 </th>
                               ))}
                               <th style={{ width: 52, padding: '6px 8px', fontSize: 11, color: '#2dd4bf', background: 'var(--surface2)', border: '1px solid var(--border)' }}>
-                                {isLastSet ? 'TOTAL' : 'IDA'}
+                                {setLabel}
                               </th>
+                              {isBack && (
+                                <th style={{ width: 56, padding: '6px 8px', fontSize: 11, color: '#fbbf24', background: 'var(--surface2)', border: '1px solid var(--border)' }}>
+                                  TOTAL
+                                </th>
+                              )}
                             </tr>
                           </thead>
                           <tbody>
@@ -420,13 +576,139 @@ export default function RoundPage() {
                                     )
                                   })}
                                   <td style={{ padding: '6px 8px', border: '1px solid var(--border)', background: 'var(--surface)', textAlign: 'center', fontWeight: 700, fontSize: 14 }}>
-                                    {isLastSet
-                                      ? (hasTotal ? <span style={{ color: '#2dd4bf' }}>{totalNeto}</span> : '—')
-                                      : (hasRow ? <span style={{ color: PLAYER_COLORS[pi] }}>{rowNeto}</span> : '—')}
+                                    {hasRow ? <span style={{ color: PLAYER_COLORS[pi] }}>{rowNeto}</span> : '—'}
                                   </td>
+                                  {isBack && (
+                                    <td style={{ padding: '6px 8px', border: '1px solid var(--border)', background: 'var(--surface)', textAlign: 'center', fontWeight: 700, fontSize: 14 }}>
+                                      {hasTotal ? <span style={{ color: '#fbbf24' }}>{totalNeto}</span> : '—'}
+                                    </td>
+                                  )}
                                 </tr>
                               )
                             })}
+                            {showStatus && statuses && renderStatusRow(
+                              holeSet, statuses, 'ESTADO', PLAYER_COLORS[p1pi] || '#2dd4bf', isBack
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )
+          }
+
+          // Render a doubles match-play scorecard: 2 team rows (best ball net per hole) + ESTADO row
+          const DoublesNetTable = ({ team1Players, team2Players, pct, title, titleColor }: {
+            team1Players: typeof players; team2Players: typeof players; pct: number;
+            title?: string; titleColor?: string
+          }) => {
+            const data = computeDoublesData(team1Players, team2Players, pct)
+            const statuses = data.map(d => d.status)
+            const teamRow = (teamPlayers: typeof players, key: 'b1' | 'b2', teamIdx: 1 | 2) => {
+              // sum per set
+              const inSet = (holeSet: typeof holes) => {
+                let sum = 0; let ok = true
+                holeSet.forEach(h => {
+                  const d = data.find(x => x.hole === h.hole_number)
+                  const v = d ? d[key] : null
+                  if (v === null) ok = false; else sum += v
+                })
+                return { sum, ok }
+              }
+              const inAll = () => {
+                let sum = 0; let ok = true
+                data.forEach(d => { if (d[key] === null) ok = false; else sum += d[key]! })
+                return { sum, ok }
+              }
+              return { inSet, inAll, teamPlayers, key, teamIdx }
+            }
+            const t1 = teamRow(team1Players, 'b1', 1)
+            const t2 = teamRow(team2Players, 'b2', 2)
+            const teamColor = (t: 1 | 2) => t === 1 ? PLAYER_COLORS[0] : PLAYER_COLORS[2]
+            const teamBg = (t: 1 | 2) => t === 1 ? PLAYER_BG[0] : PLAYER_BG[2]
+            const teamLabel = (tp: typeof players) =>
+              tp.length === 2 ? `${tp[0].name} y ${tp[1].name}` : tp.map(p => p.name).join(' y ')
+
+            return (
+              <div style={{ marginBottom: 16 }}>
+                {title && (
+                  <div style={{ fontFamily: 'var(--display)', fontSize: 12, letterSpacing: 2, color: titleColor || 'var(--text3)', paddingBottom: 8, display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <span>{title}</span>
+                    <span style={{ color: 'var(--text3)', fontSize: 11 }}>· HCP {pct}% · Mejor bola</span>
+                  </div>
+                )}
+                {[front9, ...(back9.length > 0 ? [back9] : [])].map((holeSet, si) => {
+                  const isBack = back9.length > 0 && si === 1
+                  const setLabel = isBack ? 'VUELTA' : 'IDA'
+                  return (
+                    <div key={si} style={{ marginBottom: 10 }}>
+                      <div style={{ fontSize: 11, color: 'var(--text3)', letterSpacing: 1, paddingBottom: 4 }}>
+                        {si === 0 ? 'IDA — HOYOS 1–9' : 'VUELTA — HOYOS 10–18'}
+                      </div>
+                      <div style={{ overflowX: 'auto' }}>
+                        <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 500 }}>
+                          <thead>
+                            <tr>
+                              <th style={{ textAlign: 'left', padding: '8px 10px', fontSize: 11, color: 'var(--text3)', letterSpacing: 1, background: 'var(--surface2)', border: '1px solid var(--border)', minWidth: 140 }}>EQUIPO</th>
+                              {holeSet.map(h => (
+                                <th key={h.hole_number} style={{ width: 42, padding: '6px 4px', fontSize: 12, color: 'var(--text3)', background: 'var(--surface2)', border: '1px solid var(--border)' }}>
+                                  <div>{h.hole_number}</div>
+                                  <div style={{ fontSize: 9, color: 'var(--text3)', fontWeight: 400 }}>V{h.handicap}</div>
+                                </th>
+                              ))}
+                              <th style={{ width: 52, padding: '6px 8px', fontSize: 11, color: '#2dd4bf', background: 'var(--surface2)', border: '1px solid var(--border)' }}>{setLabel}</th>
+                              {isBack && (
+                                <th style={{ width: 56, padding: '6px 8px', fontSize: 11, color: '#fbbf24', background: 'var(--surface2)', border: '1px solid var(--border)' }}>TOTAL</th>
+                              )}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {[t1, t2].map(team => {
+                              const setRes = team.inSet(holeSet)
+                              const totalRes = team.inAll()
+                              return (
+                                <tr key={team.teamIdx}>
+                                  <td style={{ padding: '6px 10px', border: '1px solid var(--border)', background: 'var(--surface)' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                      <div style={{ width: 22, height: 22, borderRadius: 6, background: teamBg(team.teamIdx), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, color: 'white', flexShrink: 0 }}>T{team.teamIdx}</div>
+                                      <span style={{ fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap', color: teamColor(team.teamIdx) }}>{teamLabel(team.teamPlayers)}</span>
+                                    </div>
+                                  </td>
+                                  {holeSet.map(h => {
+                                    const d = data.find(x => x.hole === h.hole_number)
+                                    const v = d ? d[team.key] : null
+                                    const otherKey = team.key === 'b1' ? 'b2' : 'b1'
+                                    const other = d ? d[otherKey] : null
+                                    const isWin = v !== null && other !== null && v < other
+                                    return (
+                                      <td key={h.hole_number} style={{ padding: 3, border: '1px solid var(--border)', background: 'var(--surface)', textAlign: 'center' }}>
+                                        {v !== null ? (
+                                          <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 26, height: 26, fontSize: 12, fontWeight: 700,
+                                            background: isWin ? `${teamBg(team.teamIdx)}30` : 'var(--surface2)',
+                                            border: isWin ? `1px solid ${teamColor(team.teamIdx)}` : '1px solid var(--border)',
+                                            color: isWin ? teamColor(team.teamIdx) : 'var(--text)',
+                                            borderRadius: 4
+                                          }}>{v}</div>
+                                        ) : (
+                                          <span style={{ color: 'var(--text3)', fontSize: 13 }}>—</span>
+                                        )}
+                                      </td>
+                                    )
+                                  })}
+                                  <td style={{ padding: '6px 8px', border: '1px solid var(--border)', background: 'var(--surface)', textAlign: 'center', fontWeight: 700, fontSize: 14, color: teamColor(team.teamIdx) }}>
+                                    {setRes.ok ? setRes.sum : '—'}
+                                  </td>
+                                  {isBack && (
+                                    <td style={{ padding: '6px 8px', border: '1px solid var(--border)', background: 'var(--surface)', textAlign: 'center', fontWeight: 700, fontSize: 14, color: '#fbbf24' }}>
+                                      {totalRes.ok ? totalRes.sum : '—'}
+                                    </td>
+                                  )}
+                                </tr>
+                              )
+                            })}
+                            {renderStatusRow(holeSet, statuses, `ESTADO (T1)`, teamColor(1), isBack)}
                           </tbody>
                         </table>
                       </div>
@@ -452,8 +734,13 @@ export default function RoundPage() {
             return (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <div style={{ background: 'var(--surface)', border: '1px solid #34d39920', borderRadius: 12, padding: '14px 14px 4px' }}>
-                  <NetTable title={`DOBLES — ${dMode === 'stroke' ? 'STROKE' : 'MATCH PLAY'}`} titleColor="#34d399"
-                    groupPlayers={players} pct={dPct} strategy={dMode === 'stroke' ? 'individual' : 'relative'} />
+                  {dMode === 'matchplay' ? (
+                    <DoublesNetTable title="DOBLES — MATCH PLAY" titleColor="#34d399"
+                      team1Players={team1} team2Players={team2} pct={dPct} />
+                  ) : (
+                    <NetTable title="DOBLES — STROKE" titleColor="#34d399"
+                      groupPlayers={players} pct={dPct} strategy="individual" />
+                  )}
                 </div>
                 {pairs.map(([p1, p2], idx) => {
                   const pi1 = players.findIndex(p => p.id === p1.id)
@@ -461,11 +748,14 @@ export default function RoundPage() {
                     <div key={idx} style={{ background: 'var(--surface)', border: '1px solid #f59e0b20', borderRadius: 12, padding: '14px 14px 4px' }}>
                       <NetTable title={`${p1.name} vs ${p2.name} — ${iMode === 'stroke' ? 'STROKE' : 'MATCH PLAY'}`}
                         titleColor={PLAYER_COLORS[pi1]} groupPlayers={[p1, p2]} pct={iPct}
-                        strategy={iMode === 'stroke' ? 'individual' : 'relative'} />
+                        strategy={iMode === 'stroke' ? 'individual' : 'relative'}
+                        matchPlay={iMode === 'matchplay'} />
                     </div>
                   )
                 })}
-                <div style={{ fontSize: 11, color: 'var(--text3)', paddingTop: 4 }}>El punto verde indica ventaja en ese hoyo.</div>
+                <div style={{ fontSize: 11, color: 'var(--text3)', paddingTop: 4 }}>
+                  El punto verde indica ventaja en ese hoyo. Fila <strong style={{ color: 'var(--text2)' }}>ESTADO</strong>: positivo = primer equipo/jugador arriba, negativo = abajo.
+                </div>
               </div>
             )
           }
@@ -487,21 +777,43 @@ export default function RoundPage() {
                     <div key={idx} style={{ background: 'var(--surface)', border: '1px solid #f59e0b20', borderRadius: 12, padding: '14px 14px 4px' }}>
                       <NetTable title={`${p1.name} vs ${p2.name} — ${iMode === 'stroke' ? 'STROKE' : 'MATCH PLAY'}`}
                         titleColor={PLAYER_COLORS[pi1]} groupPlayers={[p1, p2]} pct={iPct}
-                        strategy={iMode === 'stroke' ? 'individual' : 'relative'} />
+                        strategy={iMode === 'stroke' ? 'individual' : 'relative'}
+                        matchPlay={iMode === 'matchplay'} />
                     </div>
                   )
                 })}
-                <div style={{ fontSize: 11, color: 'var(--text3)', paddingTop: 4 }}>El punto verde indica ventaja en ese hoyo.</div>
+                <div style={{ fontSize: 11, color: 'var(--text3)', paddingTop: 4 }}>
+                  El punto verde indica ventaja en ese hoyo. Fila <strong style={{ color: 'var(--text2)' }}>ESTADO</strong>: positivo = primer jugador arriba.
+                </div>
               </div>
+            )
+          }
+
+          // Match Play Dobles standalone
+          if (r.mode === 'matchplay_dobles') {
+            const team1 = players.filter(p => p.team === 1)
+            const team2 = players.filter(p => p.team === 2)
+            return (
+              <>
+                <DoublesNetTable title="MATCH PLAY DOBLES" titleColor="#a78bfa"
+                  team1Players={team1} team2Players={team2} pct={hcpPct} />
+                <div style={{ fontSize: 11, color: 'var(--text3)', paddingTop: 4 }}>
+                  Fila <strong style={{ color: 'var(--text2)' }}>ESTADO</strong>: positivo = Team 1 arriba, negativo = abajo.
+                </div>
+              </>
             )
           }
 
           // Modos simples
           const simpleStrategy = isStroke ? 'individual' : 'relative'
+          const isMatchplayIndiv = r.mode === 'matchplay_individual'
           return (
             <>
-              <NetTable groupPlayers={players} pct={hcpPct} strategy={simpleStrategy} />
-              <div style={{ fontSize: 11, color: 'var(--text3)', paddingTop: 4 }}>El punto verde indica ventaja en ese hoyo.</div>
+              <NetTable groupPlayers={players} pct={hcpPct} strategy={simpleStrategy}
+                matchPlay={isMatchplayIndiv} />
+              <div style={{ fontSize: 11, color: 'var(--text3)', paddingTop: 4 }}>
+                El punto verde indica ventaja en ese hoyo.{isMatchplayIndiv && ' Fila ESTADO: positivo = primer jugador arriba.'}
+              </div>
             </>
           )
         })()}
@@ -752,6 +1064,73 @@ export default function RoundPage() {
           </div>
         )}
       </main>
+
+      {/* DELETE CONFIRMATION MODAL */}
+      {deleteCode !== null && (
+        <div onClick={cancelDelete} style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 100, padding: 20
+        }}>
+          <div onClick={e => e.stopPropagation()} style={{
+            background: 'var(--surface)', border: '1px solid rgba(248,113,113,0.3)',
+            borderRadius: 14, padding: 24, maxWidth: 380, width: '100%'
+          }}>
+            <div style={{ fontFamily: 'var(--display)', fontSize: 18, letterSpacing: 2, color: '#f87171', marginBottom: 8 }}>
+              🗑 BORRAR PARTIDA
+            </div>
+            <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 16, lineHeight: 1.5 }}>
+              Esta acción no se puede deshacer. Para confirmar, escribe el código:
+            </div>
+            <div style={{
+              background: 'rgba(248,113,113,0.08)',
+              border: '1px solid rgba(248,113,113,0.25)',
+              borderRadius: 10, padding: '14px 16px', textAlign: 'center',
+              marginBottom: 14
+            }}>
+              <div style={{ fontSize: 10, color: 'var(--text3)', letterSpacing: 2, marginBottom: 4 }}>CÓDIGO</div>
+              <div style={{ fontFamily: 'var(--display)', fontSize: 36, letterSpacing: 8, color: '#f87171', fontWeight: 700 }}>
+                {deleteCode}
+              </div>
+            </div>
+            <input
+              type="text" inputMode="numeric" pattern="[0-9]*" maxLength={4}
+              autoFocus
+              value={deleteInput}
+              onChange={e => { setDeleteInput(e.target.value.replace(/\D/g, '')); setDeleteError(false) }}
+              placeholder="Escribe los 4 dígitos"
+              style={{
+                width: '100%', boxSizing: 'border-box',
+                background: 'rgba(255,255,255,0.04)',
+                border: `1px solid ${deleteError ? '#f87171' : 'var(--border2)'}`,
+                borderRadius: 8, color: 'var(--text)',
+                padding: '12px 14px', fontSize: 18, letterSpacing: 6,
+                textAlign: 'center', outline: 'none', marginBottom: 4,
+                fontFamily: 'var(--display)'
+              }}
+            />
+            {deleteError && (
+              <div style={{ fontSize: 12, color: '#f87171', marginBottom: 8 }}>Código incorrecto.</div>
+            )}
+            <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+              <button onClick={cancelDelete} disabled={deleting} style={{
+                flex: 1, padding: '10px 14px',
+                background: 'transparent', border: '1px solid var(--border2)',
+                borderRadius: 8, color: 'var(--text2)', fontSize: 13, cursor: 'pointer'
+              }}>Cancelar</button>
+              <button onClick={confirmDelete} disabled={deleting || deleteInput.length !== 4} style={{
+                flex: 1, padding: '10px 14px',
+                background: deleteInput.length === 4 ? '#f87171' : 'rgba(248,113,113,0.3)',
+                border: 'none', borderRadius: 8,
+                color: deleteInput.length === 4 ? '#1a0606' : 'rgba(255,255,255,0.4)',
+                fontSize: 13, fontWeight: 700, cursor: deleteInput.length === 4 ? 'pointer' : 'not-allowed'
+              }}>
+                {deleting ? 'Borrando…' : 'Borrar definitivamente'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
