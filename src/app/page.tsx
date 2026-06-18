@@ -28,7 +28,7 @@ export default function Home() {
   useEffect(() => {
     async function load() {
       const [{ data: r }, { data: c }] = await Promise.all([
-        supabase.from('rounds').select('*, course:courses(*)').order('created_at', { ascending: false }).limit(20),
+        supabase.from('rounds').select('*, course:courses!course_id(*)').order('created_at', { ascending: false }).limit(20),
         supabase.from('courses').select('*').order('name')
       ])
       setRounds((r || []) as any)

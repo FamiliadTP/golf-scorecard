@@ -137,7 +137,7 @@ export default function RoundPage() {
   useEffect(() => {
     if (!id) return
     async function load() {
-      const { data: r } = await supabase.from('rounds').select('*, course:courses(*, holes(*))').eq('id', id).single()
+      const { data: r } = await supabase.from('rounds').select('*, course:courses!course_id(*, holes(*))').eq('id', id).single()
       if (!r) return
       const { data: p } = await supabase.from('round_players').select('*').eq('round_id', id).order('position')
       const { data: s } = await supabase.from('scores').select('*').eq('round_id', id)
