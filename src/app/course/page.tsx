@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { supabase, Course } from '@/lib/supabase'
+import Menu from '@/components/Menu'
 
 export default function CoursesPage() {
   const [courses, setCourses] = useState<Course[]>([])
@@ -31,6 +32,7 @@ export default function CoursesPage() {
             padding: '8px 16px', borderRadius: 8,
             fontWeight: 700, fontSize: 13
           }}>＋ Nuevo</Link>
+          <Menu />
         </div>
       </header>
 
