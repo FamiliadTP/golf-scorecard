@@ -31,7 +31,9 @@ export default function NewCourse() {
   const router = useRouter()
   const [name, setName] = useState('')
   const [club, setClub] = useState('')
-  const [holesCount, setHolesCount] = useState<9 | 18>(18)
+  const [courseType, setCourseType] = useState<'h9' | 'h18' | 'loop'>('h18')
+  const [loopLabel, setLoopLabel] = useState('')
+  const holesCount: 9 | 18 = courseType === 'h18' ? 18 : 9
   const [holes, setHoles] = useState(() =>
     Array.from({ length: 18 }, (_, i) => ({
       hole_number: i + 1,
@@ -41,8 +43,9 @@ export default function NewCourse() {
   )
   const [saving, setSaving] = useState(false)
 
-  const setHoleCount = (n: 9 | 18) => {
-    setHolesCount(n)
+  const setType = (t: 'h9' | 'h18' | 'loop') => {
+    setCourseType(t)
+    const n = t === 'h18' ? 18 : 9
     setHoles(Array.from({ length: n }, (_, i) => ({
       hole_number: i + 1,
       par: holes[i]?.par ?? 4,
@@ -56,10 +59,16 @@ export default function NewCourse() {
 
   const handleSave = async () => {
     if (!name.trim()) return
+    if (courseType === 'loop' && !loopLabel.trim()) return
     setSaving(true)
     const { data: course, error } = await supabase
       .from('courses')
-      .insert({ name: name.trim(), club: club.trim(), holes_count: holesCount })
+      .insert({
+        name: name.trim(),
+        club: club.trim(),
+        holes_count: holesCount,
+        loop_label: courseType === 'loop' ? loopLabel.trim() : null
+      })
       .select().single()
 
     if (error || !course) { setSaving(false); alert('Error al guardar'); return }
@@ -97,20 +106,42 @@ export default function NewCourse() {
             <input style={inputStyle} value={club} onChange={e => setClub(e.target.value)} placeholder="Ej: Los Leones" />
           </div>
           <div>
-            <label style={labelStyle}>Número de hoyos</label>
-            <div style={{ display: 'flex', gap: 8 }}>
-              {([9, 18] as const).map(n => (
-                <button key={n} onClick={() => setHoleCount(n)} style={{
-                  padding: '8px 24px', borderRadius: 8,
+            <label style={labelStyle}>Tipo de campo</label>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {([
+                { t: 'h9', label: '9 hoyos' },
+                { t: 'h18', label: '18 hoyos' },
+                { t: 'loop', label: 'Combinación de 9' },
+              ] as const).map(({ t, label }) => (
+                <button key={t} onClick={() => setType(t)} style={{
+                  padding: '8px 18px', borderRadius: 8,
                   border: '1px solid var(--border)',
-                  background: holesCount === n ? '#2dd4bf' : 'transparent',
-                  color: holesCount === n ? '#071209' : 'var(--text3)',
-                  fontWeight: holesCount === n ? 700 : 400,
+                  background: courseType === t ? '#2dd4bf' : 'transparent',
+                  color: courseType === t ? '#071209' : 'var(--text3)',
+                  fontWeight: courseType === t ? 700 : 400,
                   fontSize: 14, cursor: 'pointer'
-                }}>{n} hoyos</button>
+                }}>{label}</button>
               ))}
             </div>
+            {courseType === 'loop' && (
+              <p style={{ fontSize: 12, color: 'var(--text3)', marginTop: 8, lineHeight: 1.4 }}>
+                Vuelta de 9 hoyos con ventajas 1–9, que se combina con otra vuelta al armar la
+                partida. Dale un apellido (ej: Sur, Este, Norte).
+              </p>
+            )}
           </div>
+
+          {courseType === 'loop' && (
+            <div style={{ marginTop: 16 }}>
+              <label style={labelStyle}>Apellido de la vuelta *</label>
+              <input
+                style={inputStyle}
+                value={loopLabel}
+                onChange={e => setLoopLabel(e.target.value)}
+                placeholder="Ej: Este"
+              />
+            </div>
+          )}
         </div>
 
         {/* Holes table */}
@@ -163,11 +194,11 @@ export default function NewCourse() {
 
         <button
           onClick={handleSave}
-          disabled={saving || !name.trim()}
+          disabled={saving || !name.trim() || (courseType === 'loop' && !loopLabel.trim())}
           style={{
             width: '100%', padding: '14px',
-            background: saving || !name.trim() ? 'var(--border)' : '#2dd4bf',
-            color: saving || !name.trim() ? 'var(--text3)' : '#071209',
+            background: saving || !name.trim() || (courseType === 'loop' && !loopLabel.trim()) ? 'var(--border)' : '#2dd4bf',
+            color: saving || !name.trim() || (courseType === 'loop' && !loopLabel.trim()) ? 'var(--text3)' : '#071209',
             border: 'none', borderRadius: 10,
             fontSize: 16, fontWeight: 700, cursor: saving ? 'wait' : 'pointer',
             fontFamily: 'var(--display)', letterSpacing: 2

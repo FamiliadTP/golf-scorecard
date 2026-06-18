@@ -9,6 +9,7 @@ create table courses (
   name text not null,
   club text,
   holes_count int not null default 18,
+  loop_label text,  -- apellido de la vuelta (Sur/Este/Norte) si es combinación de 9
   created_at timestamptz default now()
 );
 
@@ -26,6 +27,7 @@ create table holes (
 create table rounds (
   id uuid primary key default gen_random_uuid(),
   course_id uuid references courses(id),
+  second_course_id uuid references courses(id),  -- 2ª vuelta de 9 (combinación), null si no aplica
   mode text not null check (mode in ('stroke', 'matchplay_individual', 'matchplay_dobles', 'bismarck')),
   holes_played int not null default 18,
   date date not null default current_date,

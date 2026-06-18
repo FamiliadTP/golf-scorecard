@@ -29,6 +29,24 @@ export function correctCombinedHandicaps(holes: Hole[]): Hole[] {
   }))
 }
 
+// Combina dos vueltas de 9 hoyos en una tarjeta de 18, aplicando la corrección
+// de ventajas: la PRIMERA vuelta toma los impares (v*2-1) y la SEGUNDA los
+// pares (v*2). Las vueltas se siguen guardando con ventajas 1–9; esta función
+// arma los 18 hoyos al momento de jugar. `secondLoop` puede ser la misma vuelta
+// que `firstLoop` (cancha de 9 jugada dos veces).
+export function buildLoopRoundHoles(firstLoop: Hole[], secondLoop: Hole[]): Hole[] {
+  const f = [...firstLoop].sort((a, b) => a.hole_number - b.hole_number).slice(0, 9)
+  const s = [...secondLoop].sort((a, b) => a.hole_number - b.hole_number).slice(0, 9)
+  const out: Hole[] = []
+  f.forEach((h, i) => out.push({
+    id: `loop1-${i + 1}`, hole_number: i + 1, par: h.par, handicap: h.handicap * 2 - 1,
+  }))
+  s.forEach((h, i) => out.push({
+    id: `loop2-${i + 1}`, hole_number: i + 10, par: h.par, handicap: h.handicap * 2,
+  }))
+  return out
+}
+
 // ─── Handicap helpers ────────────────────────────────────────────────
 
 // Ventaja individual contra el campo (usada en Stroke Play)

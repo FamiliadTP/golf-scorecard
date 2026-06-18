@@ -63,6 +63,8 @@ export default function NewRound() {
   const router = useRouter()
   const [courses, setCourses] = useState<Course[]>([])
   const [courseId, setCourseId] = useState('')
+  const [secondCourseId, setSecondCourseId] = useState('')
+  const [playTwoLoops, setPlayTwoLoops] = useState(false)
   const [mode, setMode] = useState<GameMode>('stroke')
   const [holesPlayed, setHolesPlayed] = useState(18)
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
@@ -86,6 +88,32 @@ export default function NewRound() {
   }, [])
 
   const isStroke = mode === 'stroke'
+
+  const selectedCourse: any = courses.find(c => c.id === courseId)
+  const isNineType = selectedCourse?.holes_count === 9
+  const nineCourses: any[] = courses.filter((c: any) => c.holes_count === 9)
+  const courseLabel = (c: any) =>
+    `${c.name}${c.loop_label ? ` · ${c.loop_label}` : ''}${c.club ? ` — ${c.club}` : ''}`
+
+  // Ajusta vueltas / segunda vuelta según el tipo de campo seleccionado.
+  useEffect(() => {
+    const c: any = courses.find(x => x.id === courseId)
+    if (!c) return
+    if (c.holes_count === 9) {
+      if (playTwoLoops) {
+        setHolesPlayed(18)
+        setSecondCourseId(prev => prev || courseId)
+      } else {
+        setHolesPlayed(9)
+        setSecondCourseId('')
+      }
+    } else {
+      setPlayTwoLoops(false)
+      setSecondCourseId('')
+      setHolesPlayed(c.holes_count || 18)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [courseId, playTwoLoops, courses])
 
   // Fixed player counts per mode
   const fixedCount: Record<GameMode, number | null> = {
@@ -120,8 +148,13 @@ export default function NewRound() {
     setPlayers(prev => prev.filter((_, idx) => idx !== i))
   }
 
+  const teamBalanced = !(mode === 'combinado_4' || mode === 'matchplay_dobles') ||
+    (players.filter(p => p.team === 1).length === 2 && players.filter(p => p.team === 2).length === 2)
+
   const isValid = () => {
     if (!courseId) return false
+    if (playTwoLoops && !secondCourseId) return false
+    if (!teamBalanced) return false
     const needed = fixedCount[mode]
     if (needed !== null && players.length !== needed) return false
     return players.every(p => p.name.trim())
@@ -130,7 +163,7 @@ export default function NewRound() {
   const handleStart = async () => {
     if (!isValid() || saving) return
     setSaving(true)
-    const roundData: any = { course_id: courseId, mode, holes_played: holesPlayed, date }
+    const roundData: any = { course_id: courseId, second_course_id: playTwoLoops ? secondCourseId : null, mode, holes_played: holesPlayed, date }
     if (['stroke', 'matchplay_individual', 'matchplay_dobles', 'bismarck'].includes(mode)) roundData.hcp_pct = hcpPct
     if (mode === 'combinado_4') {
       roundData.dobles_mode = doblesMode; roundData.dobles_hcp_pct = doblesHcpPct
@@ -175,23 +208,58 @@ export default function NewRound() {
               <div>
                 <label style={{ fontSize: 11, color: 'var(--text3)', letterSpacing: 1, display: 'block', marginBottom: 6 }}>CAMPO</label>
                 <select value={courseId} onChange={e => { setCourseId(e.target.value); const c = courses.find(c => c.id === e.target.value); if (c) setHolesPlayed((c as any).holes_count || 18) }} style={{ ...inp, color: '#e2f5e9' }}>
-                  {courses.map(c => <option key={c.id} value={c.id} style={{ background: '#0f2318', color: '#e2f5e9' }}>{c.name}{c.club ? ` — ${c.club}` : ''}</option>)}
+                  {courses.map(c => <option key={c.id} value={c.id} style={{ background: '#0f2318', color: '#e2f5e9' }}>{courseLabel(c)}</option>)}
                 </select>
               </div>
-              <div style={{ display: 'flex', gap: 10 }}>
-                <div style={{ flex: 1 }}>
-                  <label style={{ fontSize: 11, color: 'var(--text3)', letterSpacing: 1, display: 'block', marginBottom: 6 }}>HOYOS</label>
+
+              {isNineType && (
+                <div>
+                  <label style={{ fontSize: 11, color: 'var(--text3)', letterSpacing: 1, display: 'block', marginBottom: 6 }}>VUELTAS</label>
                   <div style={{ display: 'flex', gap: 8 }}>
-                    {[9, 18].map(n => (
-                      <button key={n} onClick={() => setHolesPlayed(n)} style={{
-                        padding: '8px 20px', borderRadius: 8, border: '1px solid var(--border)',
-                        background: holesPlayed === n ? '#2dd4bf' : 'transparent',
-                        color: holesPlayed === n ? '#071209' : 'var(--text3)',
+                    {[
+                      { two: false, label: '1 vuelta (9)' },
+                      { two: true, label: '2 vueltas (18)' },
+                    ].map(o => (
+                      <button key={o.label} onClick={() => setPlayTwoLoops(o.two)} style={{
+                        padding: '8px 18px', borderRadius: 8, border: '1px solid var(--border)',
+                        background: playTwoLoops === o.two ? '#2dd4bf' : 'transparent',
+                        color: playTwoLoops === o.two ? '#071209' : 'var(--text3)',
                         fontWeight: 600, fontSize: 14, cursor: 'pointer'
-                      }}>{n}</button>
+                      }}>{o.label}</button>
                     ))}
                   </div>
                 </div>
+              )}
+
+              {isNineType && playTwoLoops && (
+                <div>
+                  <label style={{ fontSize: 11, color: 'var(--text3)', letterSpacing: 1, display: 'block', marginBottom: 6 }}>SEGUNDA VUELTA</label>
+                  <select value={secondCourseId} onChange={e => setSecondCourseId(e.target.value)} style={{ ...inp, color: '#e2f5e9' }}>
+                    {nineCourses.map(c => <option key={c.id} value={c.id} style={{ background: '#0f2318', color: '#e2f5e9' }}>{courseLabel(c)}</option>)}
+                  </select>
+                  <p style={{ fontSize: 12, color: 'var(--text3)', marginTop: 6, lineHeight: 1.4 }}>
+                    1ª vuelta = ventajas impares · 2ª vuelta = ventajas pares. Puedes repetir la
+                    misma vuelta dos veces.
+                  </p>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: 10 }}>
+                {!isNineType && (
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: 11, color: 'var(--text3)', letterSpacing: 1, display: 'block', marginBottom: 6 }}>HOYOS</label>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      {[9, 18].map(n => (
+                        <button key={n} onClick={() => setHolesPlayed(n)} style={{
+                          padding: '8px 20px', borderRadius: 8, border: '1px solid var(--border)',
+                          background: holesPlayed === n ? '#2dd4bf' : 'transparent',
+                          color: holesPlayed === n ? '#071209' : 'var(--text3)',
+                          fontWeight: 600, fontSize: 14, cursor: 'pointer'
+                        }}>{n}</button>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <div style={{ flex: 1 }}>
                   <label style={{ fontSize: 11, color: 'var(--text3)', letterSpacing: 1, display: 'block', marginBottom: 6 }}>FECHA</label>
                   <input type="date" value={date} onChange={e => setDate(e.target.value)} style={inp} />
@@ -243,11 +311,21 @@ export default function NewRound() {
             </div>
           )}
 
+          {(mode === 'combinado_4' || mode === 'matchplay_dobles') && !teamBalanced && (
+            <div style={{ marginBottom: 14, padding: '8px 12px', borderRadius: 8, background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.25)', fontSize: 12, color: '#f87171' }}>
+              Cada equipo debe tener 2 jugadores. Usa los botones T1 / T2 para asignarlos.
+            </div>
+          )}
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {players.map((p, i) => (
+            {players.map((p, i) => {
+              const isDoubles = mode === 'combinado_4' || mode === 'matchplay_dobles'
+              const teamColor = (t: number) => PLAYER_COLORS[t === 1 ? 0 : 2]
+              const teamBg = (t: number) => PLAYER_BG[t === 1 ? 0 : 2]
+              return (
               <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '10px 14px', borderRadius: 10, background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)' }}>
-                <div style={{ width: 32, height: 32, borderRadius: '50%', background: PLAYER_BG[i], display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 12, color: 'white', flexShrink: 0 }}>
-                  {(mode === 'combinado_4' || mode === 'matchplay_dobles') ? `T${p.team}` : (i + 1)}
+                <div style={{ width: 32, height: 32, borderRadius: '50%', background: isDoubles ? teamBg(p.team) : PLAYER_BG[i], display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 12, color: 'white', flexShrink: 0 }}>
+                  {isDoubles ? `T${p.team}` : (i + 1)}
                 </div>
                 <input
                   value={p.name}
@@ -255,6 +333,18 @@ export default function NewRound() {
                   placeholder="Nombre del jugador..."
                   style={{ ...inp, padding: '8px 12px', flex: 1 }}
                 />
+                {isDoubles && (
+                  <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                    {[1, 2].map(t => (
+                      <button key={t} onClick={() => updatePlayer(i, 'team', t)} style={{
+                        padding: '7px 11px', borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                        border: `1px solid ${p.team === t ? teamColor(t) : 'var(--border)'}`,
+                        background: p.team === t ? teamColor(t) : 'transparent',
+                        color: p.team === t ? '#071209' : 'var(--text3)'
+                      }}>T{t}</button>
+                    ))}
+                  </div>
+                )}
                 {isStroke && players.length > 1 && (
                   <button onClick={() => removePlayer(i)} style={{
                     background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.2)',
@@ -263,7 +353,8 @@ export default function NewRound() {
                   }}>✕</button>
                 )}
               </div>
-            ))}
+              )
+            })}
           </div>
         </section>
 
@@ -279,6 +370,11 @@ export default function NewRound() {
                 <span style={{ flex: 1, fontSize: 14, color: p.name ? PLAYER_COLORS[i] : 'var(--text3)', fontWeight: p.name ? 600 : 400 }}>
                   {p.name || `Jugador ${i + 1}`}
                 </span>
+                {(mode === 'combinado_4' || mode === 'matchplay_dobles') && (
+                  <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 6, marginRight: 4, color: '#071209', background: PLAYER_COLORS[p.team === 1 ? 0 : 2] }}>
+                    T{p.team}
+                  </span>
+                )}
                 <label style={{ fontSize: 11, color: 'var(--text3)', letterSpacing: 1, marginRight: 6 }}>HCP</label>
                 <input
                   type="number" min={0} max={54}

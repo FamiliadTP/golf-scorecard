@@ -7,7 +7,7 @@ import { supabase, Round, RoundPlayer, Score, Hole, Course } from '@/lib/supabas
 import {
   calcStroke, calcMatchPlay, calcMatchPlayDobles, calcBismarck,
   calcCombinado4, calcCombinadoBismarck, getExtraStrokes, getRelativeExtra,
-  correctCombinedHandicaps
+  correctCombinedHandicaps, buildLoopRoundHoles
 } from '@/lib/golf'
 
 const PLAYER_COLORS = ['#2dd4bf', '#f59e0b', '#a78bfa', '#f87171']
@@ -125,6 +125,7 @@ export default function RoundPage() {
   const [scores, setScores] = useState<Score[]>([])
   const [holes, setHoles] = useState<Hole[]>([])
   const [course, setCourse] = useState<Course | null>(null)
+  const [secondCourse, setSecondCourse] = useState<Course | null>(null)
   const [activeTab, setActiveTab] = useState<'card' | 'neto' | 'results'>('card')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState<string | null>(null)
@@ -142,9 +143,17 @@ export default function RoundPage() {
       const { data: s } = await supabase.from('scores').select('*').eq('round_id', id)
       setRound(r as any)
       setCourse((r as any).course)
-      const sortedHoles = [...((r as any).course?.holes || [])].sort((a: any, b: any) => a.hole_number - b.hole_number).slice(0, r.holes_played)
-      // Cancha combinada de dos vueltas de 9 (ventajas 1–9 c/u): corregir a 1–18.
-      setHoles(correctCombinedHandicaps(sortedHoles as any) as any)
+      if ((r as any).second_course_id) {
+        // Partida de dos vueltas de 9: combinar con corrección impares/pares.
+        const { data: sc } = await supabase.from('courses').select('*, holes(*)').eq('id', (r as any).second_course_id).single()
+        setSecondCourse(sc as any)
+        const firstLoop = [...((r as any).course?.holes || [])]
+        setHoles(buildLoopRoundHoles(firstLoop as any, ((sc as any)?.holes || []) as any) as any)
+      } else {
+        const sortedHoles = [...((r as any).course?.holes || [])].sort((a: any, b: any) => a.hole_number - b.hole_number).slice(0, r.holes_played)
+        // Cancha combinada de dos vueltas de 9 (ventajas 1–9 c/u): corregir a 1–18.
+        setHoles(correctCombinedHandicaps(sortedHoles as any) as any)
+      }
       setPlayers((p || []) as any)
       setScores((s || []) as any)
       setLoading(false)
@@ -234,7 +243,13 @@ export default function RoundPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
             <Link href="/" style={{ color: 'var(--text3)', fontSize: 18 }}>←</Link>
             <div>
-              <h1 style={{ fontFamily: 'var(--display)', fontSize: 22, letterSpacing: 1, lineHeight: 1 }}>{course?.name}</h1>
+              <h1 style={{ fontFamily: 'var(--display)', fontSize: 22, letterSpacing: 1, lineHeight: 1 }}>{course?.name}{secondCourse ? (
+                <span style={{ fontSize: 14, color: 'var(--text3)', display: 'block', marginTop: 4, letterSpacing: 0 }}>
+                  {course?.loop_label || 'Vuelta 1'} + {secondCourse?.loop_label || 'Vuelta 2'}
+                </span>
+              ) : (course?.loop_label ? (
+                <span style={{ fontSize: 14, color: 'var(--text3)', display: 'block', marginTop: 4, letterSpacing: 0 }}>{course.loop_label}</span>
+              ) : null)}</h1>
               <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>
                 {new Date(r.date).toLocaleDateString('es-CL', { day: 'numeric', month: 'long' })} · {holes.length} hoyos · {MODE_LABELS[r.mode]}
               </div>
@@ -302,8 +317,8 @@ export default function RoundPage() {
                         <th style={{ textAlign: 'left', padding: '8px 10px', fontSize: 11, color: 'var(--text3)', letterSpacing: 1, background: 'var(--surface2)', border: '1px solid var(--border)', minWidth: 100 }}>JUGADOR</th>
                         {holeSet.map(h => (
                           <th key={h.hole_number} style={{ width: 42, padding: '6px 4px', fontSize: 12, color: 'var(--text3)', background: 'var(--surface2)', border: '1px solid var(--border)' }}>
-                            <div>{h.hole_number}</div>
-                            <div style={{ fontSize: 9, color: 'var(--text3)', fontWeight: 400 }}>P{h.par}</div>
+                            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text2)' }}>{h.hole_number}</div>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text3)' }}>P{h.par}</div><div style={{ fontSize: 11, fontWeight: 700, color: '#2dd4bf' }}>V{h.handicap}</div>
                           </th>
                         ))}
                         <th style={{ width: 52, padding: '6px 8px', fontSize: 11, color: '#2dd4bf', background: 'var(--surface2)', border: '1px solid var(--border)' }}>
@@ -518,8 +533,8 @@ export default function RoundPage() {
                               <th style={{ textAlign: 'left', padding: '8px 10px', fontSize: 11, color: 'var(--text3)', letterSpacing: 1, background: 'var(--surface2)', border: '1px solid var(--border)', minWidth: 100 }}>JUGADOR</th>
                               {holeSet.map(h => (
                                 <th key={h.hole_number} style={{ width: 42, padding: '6px 4px', fontSize: 12, color: 'var(--text3)', background: 'var(--surface2)', border: '1px solid var(--border)' }}>
-                                  <div>{h.hole_number}</div>
-                                  <div style={{ fontSize: 9, color: 'var(--text3)', fontWeight: 400 }}>V{h.handicap}</div>
+                                  <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text2)' }}>{h.hole_number}</div>
+                                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text3)' }}>P{h.par}</div><div style={{ fontSize: 11, fontWeight: 700, color: '#2dd4bf' }}>V{h.handicap}</div>
                                 </th>
                               ))}
                               <th style={{ width: 52, padding: '6px 8px', fontSize: 11, color: '#2dd4bf', background: 'var(--surface2)', border: '1px solid var(--border)' }}>
@@ -656,8 +671,8 @@ export default function RoundPage() {
                               <th style={{ textAlign: 'left', padding: '8px 10px', fontSize: 11, color: 'var(--text3)', letterSpacing: 1, background: 'var(--surface2)', border: '1px solid var(--border)', minWidth: 140 }}>EQUIPO</th>
                               {holeSet.map(h => (
                                 <th key={h.hole_number} style={{ width: 42, padding: '6px 4px', fontSize: 12, color: 'var(--text3)', background: 'var(--surface2)', border: '1px solid var(--border)' }}>
-                                  <div>{h.hole_number}</div>
-                                  <div style={{ fontSize: 9, color: 'var(--text3)', fontWeight: 400 }}>V{h.handicap}</div>
+                                  <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text2)' }}>{h.hole_number}</div>
+                                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text3)' }}>P{h.par}</div><div style={{ fontSize: 11, fontWeight: 700, color: '#2dd4bf' }}>V{h.handicap}</div>
                                 </th>
                               ))}
                               <th style={{ width: 52, padding: '6px 8px', fontSize: 11, color: '#2dd4bf', background: 'var(--surface2)', border: '1px solid var(--border)' }}>{setLabel}</th>

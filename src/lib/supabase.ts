@@ -26,6 +26,7 @@ export interface Course {
   name: string
   club: string
   holes_count: number
+  loop_label?: string | null
   holes: Hole[]
 }
 
@@ -40,6 +41,7 @@ export interface Hole {
 export interface Round {
   id: string
   course_id: string
+  second_course_id?: string | null
   mode: GameMode
   holes_played: number
   date: string

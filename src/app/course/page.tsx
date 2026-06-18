@@ -44,10 +44,10 @@ export default function CoursesPage() {
               border: '1px solid var(--border)',
               borderRadius: 12, padding: '14px 16px'
             }}>
-              <div style={{ fontWeight: 600, fontSize: 15 }}>{c.name}</div>
+              <div style={{ fontWeight: 600, fontSize: 15 }}>{c.name}{c.loop_label ? <span style={{ color: '#2dd4bf' }}> · {c.loop_label}</span> : null}</div>
               {c.club && <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 2 }}>{c.club}</div>}
               <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 4 }}>
-                {c.holes_count} hoyos · {(c.holes || []).length} cargados
+                {c.loop_label ? 'Vuelta de 9 (combinable)' : `${c.holes_count} hoyos`} · {(c.holes || []).length} cargados
               </div>
             </Link>
           ))}
