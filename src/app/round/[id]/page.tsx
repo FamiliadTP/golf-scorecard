@@ -6,7 +6,8 @@ import Link from 'next/link'
 import { supabase, Round, RoundPlayer, Score, Hole, Course } from '@/lib/supabase'
 import {
   calcStroke, calcMatchPlay, calcMatchPlayDobles, calcBismarck,
-  calcCombinado4, calcCombinadoBismarck, getExtraStrokes, getRelativeExtra
+  calcCombinado4, calcCombinadoBismarck, getExtraStrokes, getRelativeExtra,
+  correctCombinedHandicaps
 } from '@/lib/golf'
 
 const PLAYER_COLORS = ['#2dd4bf', '#f59e0b', '#a78bfa', '#f87171']
@@ -142,7 +143,8 @@ export default function RoundPage() {
       setRound(r as any)
       setCourse((r as any).course)
       const sortedHoles = [...((r as any).course?.holes || [])].sort((a: any, b: any) => a.hole_number - b.hole_number).slice(0, r.holes_played)
-      setHoles(sortedHoles as any)
+      // Cancha combinada de dos vueltas de 9 (ventajas 1–9 c/u): corregir a 1–18.
+      setHoles(correctCombinedHandicaps(sortedHoles as any) as any)
       setPlayers((p || []) as any)
       setScores((s || []) as any)
       setLoading(false)

@@ -1,5 +1,34 @@
 import { Hole, RoundPlayer, Score } from './supabase'
 
+// ─── Corrección de ventajas para canchas combinadas (loops de 9 hoyos) ──
+//
+// En clubes con 3 o más vueltas de 9 hoyos (p.ej. Las Brisas de Santo Domingo:
+// Sur, Este, Norte) cada vuelta se guarda con sus ventajas propias 1–9. Al
+// jugar 18 hoyos se combinan dos vueltas, y las ventajas deben repartirse en
+// el rango 1–18: la PRIMERA vuelta toma los impares (v*2-1) y la SEGUNDA los
+// pares (v*2).
+//
+// Sin esta corrección, la asignación de palos se DUPLICA: un hoyo con ventaja 1
+// existe en ambas vueltas, así que una diferencia de 3 de HDCP daría 3 palos en
+// cada vuelta (6 en total) en lugar de 3 en las 18. Esta función se aplica al
+// usar el campo en una partida (no al crearlo): el campo se sigue guardando con
+// ventajas 1–9 por vuelta.
+export function correctCombinedHandicaps(holes: Hole[]): Hole[] {
+  // Solo aplica cuando se juegan 18 hoyos formados por dos vueltas 1–9.
+  if (holes.length !== 18) return holes
+  const sorted = [...holes].sort((a, b) => a.hole_number - b.hole_number)
+  const isLoop1to9 = (arr: Hole[]) => {
+    const vals = Array.from(new Set(arr.map(h => h.handicap)))
+    return vals.length === 9 && vals.every(v => v >= 1 && v <= 9)
+  }
+  // Si alguna vuelta no usa exactamente 1–9 es un campo normal (ya 1–18): no tocar.
+  if (!isLoop1to9(sorted.slice(0, 9)) || !isLoop1to9(sorted.slice(9, 18))) return holes
+  return sorted.map((h, i) => ({
+    ...h,
+    handicap: i < 9 ? h.handicap * 2 - 1 : h.handicap * 2,
+  }))
+}
+
 // ─── Handicap helpers ────────────────────────────────────────────────
 
 // Ventaja individual contra el campo (usada en Stroke Play)
