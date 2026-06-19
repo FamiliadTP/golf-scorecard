@@ -128,6 +128,8 @@ export default function RoundPage() {
   const [course, setCourse] = useState<Course | null>(null)
   const [secondCourse, setSecondCourse] = useState<Course | null>(null)
   const [activeTab, setActiveTab] = useState<'card' | 'neto' | 'results'>('card')
+  const [openMatches, setOpenMatches] = useState<Record<string, boolean>>({})
+  const toggleMatch = (k: string) => setOpenMatches(m => ({ ...m, [k]: !m[k] }))
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
@@ -749,30 +751,121 @@ export default function RoundPage() {
               [team1[0], team2[0]], [team1[0], team2[1]],
               [team1[1], team2[0]], [team1[1], team2[1]],
             ].filter(pair => pair[0] && pair[1])
+
+            const lastNonNull = (arr: (number | null)[]) => {
+              let v: number | null = null
+              arr.forEach(x => { if (x !== null) v = x })
+              return v
+            }
+            // Estadística simple: neto promedio por hoyo y desviación vs par (en neto).
+            const netStats = (mp: typeof players, pct: number) => {
+              const allHcps = mp.map(p => p.handicap)
+              return mp.map(p => {
+                let sumNet = 0, sumVsPar = 0, n = 0
+                holes.forEach(h => {
+                  const s = getScore(p.id, h.hole_number)
+                  if (s === null) return
+                  const net = s - getRelativeExtra(h.handicap, p.handicap, allHcps, holes.length, pct)
+                  sumNet += net; sumVsPar += net - h.par; n++
+                })
+                return { id: p.id, name: p.name, n, avgNet: n ? sumNet / n : null, avgVsPar: n ? sumVsPar / n : null }
+              })
+            }
+            const thruOf = (ps: typeof players) => holes.filter(h => ps.every(p => getScore(p.id, h.hole_number) !== null)).length
+
+            const matches = [
+              {
+                key: 'dobles', label: 'DOBLES', color: '#34d399', pct: dPct,
+                left: team1.map(p => p.name).join(' y ') || 'Equipo 1',
+                right: team2.map(p => p.name).join(' y ') || 'Equipo 2',
+                status: lastNonNull(computeDoublesData(team1, team2, dPct).map(d => d.status)),
+                thru: thruOf([...team1, ...team2]),
+                stats: netStats([...team1, ...team2], dPct),
+                content: dMode === 'matchplay'
+                  ? <DoublesNetTable title="DOBLES — MATCH PLAY" titleColor="#34d399" team1Players={team1} team2Players={team2} pct={dPct} />
+                  : <NetTable title="DOBLES — STROKE" titleColor="#34d399" groupPlayers={players} pct={dPct} strategy="individual" />
+              },
+              ...pairs.map(([p1, p2], idx) => {
+                const pi1 = players.findIndex(p => p.id === p1.id)
+                return {
+                  key: `i${idx}`, label: `INDIVIDUAL ${idx + 1}`, color: PLAYER_COLORS[pi1] || '#f59e0b', pct: iPct,
+                  left: p1.name, right: p2.name,
+                  status: lastNonNull(computeIndivStatuses(p1, p2, iPct)),
+                  thru: thruOf([p1, p2]),
+                  stats: netStats([p1, p2], iPct),
+                  content: <NetTable title={`${p1.name} vs ${p2.name} — ${iMode === 'stroke' ? 'STROKE' : 'MATCH PLAY'}`}
+                    titleColor={PLAYER_COLORS[pi1]} groupPlayers={[p1, p2]} pct={iPct}
+                    strategy={iMode === 'stroke' ? 'individual' : 'relative'} matchPlay={iMode === 'matchplay'} />
+                }
+              })
+            ]
+            const leads1 = matches.filter(m => (m.status ?? 0) > 0).length
+            const leads2 = matches.filter(m => (m.status ?? 0) < 0).length
+            const ties = matches.filter(m => m.status === 0).length
+
             return (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={{ background: 'var(--surface)', border: '1px solid #34d39920', borderRadius: 12, padding: '14px 14px 4px' }}>
-                  {dMode === 'matchplay' ? (
-                    <DoublesNetTable title="DOBLES — MATCH PLAY" titleColor="#34d399"
-                      team1Players={team1} team2Players={team2} pct={dPct} />
-                  ) : (
-                    <NetTable title="DOBLES — STROKE" titleColor="#34d399"
-                      groupPlayers={players} pct={dPct} strategy="individual" />
-                  )}
+                <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
+                  <div style={{ flex: 1, textAlign: 'center', background: 'var(--surface)', border: '1px solid #2dd4bf33', borderRadius: 10, padding: '8px 6px' }}>
+                    <div style={{ fontSize: 10, color: 'var(--text3)', letterSpacing: 1 }}>EQUIPO 1</div>
+                    <div style={{ fontFamily: 'var(--display)', fontSize: 24, fontWeight: 700, color: '#2dd4bf', lineHeight: 1.1 }}>{leads1}</div>
+                    <div style={{ fontSize: 10, color: 'var(--text3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{team1.map(p => p.name).join(' y ')}</div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', color: 'var(--text3)', fontSize: 11, minWidth: 40, justifyContent: 'center', textAlign: 'center' }}>{ties > 0 ? `${ties} AS` : 'vs'}</div>
+                  <div style={{ flex: 1, textAlign: 'center', background: 'var(--surface)', border: '1px solid #f8717133', borderRadius: 10, padding: '8px 6px' }}>
+                    <div style={{ fontSize: 10, color: 'var(--text3)', letterSpacing: 1 }}>EQUIPO 2</div>
+                    <div style={{ fontFamily: 'var(--display)', fontSize: 24, fontWeight: 700, color: '#f87171', lineHeight: 1.1 }}>{leads2}</div>
+                    <div style={{ fontSize: 10, color: 'var(--text3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{team2.map(p => p.name).join(' y ')}</div>
+                  </div>
                 </div>
-                {pairs.map(([p1, p2], idx) => {
-                  const pi1 = players.findIndex(p => p.id === p1.id)
+
+                {matches.map(m => {
+                  const open = !!openMatches[m.key]
+                  const st = m.status
+                  const leadFirst = st !== null && st > 0
+                  const leadSecond = st !== null && st < 0
+                  const badge = st === null ? '—' : st === 0 ? 'AS' : `${Math.abs(st)}↑`
+                  const badgeColor = st === null ? 'var(--text3)' : st === 0 ? 'var(--text2)' : leadFirst ? '#2dd4bf' : '#f87171'
                   return (
-                    <div key={idx} style={{ background: 'var(--surface)', border: '1px solid #f59e0b20', borderRadius: 12, padding: '14px 14px 4px' }}>
-                      <NetTable title={`${p1.name} vs ${p2.name} — ${iMode === 'stroke' ? 'STROKE' : 'MATCH PLAY'}`}
-                        titleColor={PLAYER_COLORS[pi1]} groupPlayers={[p1, p2]} pct={iPct}
-                        strategy={iMode === 'stroke' ? 'individual' : 'relative'}
-                        matchPlay={iMode === 'matchplay'} />
+                    <div key={m.key} style={{ background: 'var(--surface)', border: `1px solid ${m.color}33`, borderRadius: 12, overflow: 'hidden' }}>
+                      <button onClick={() => toggleMatch(m.key)} style={{
+                        width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 10,
+                        padding: '12px 14px', background: 'transparent', border: 'none', cursor: 'pointer'
+                      }}>
+                        <span style={{ color: m.color, fontSize: 12, width: 12, flexShrink: 0 }}>{open ? '▾' : '▸'}</span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+                            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1, color: m.color }}>{m.label}</span>
+                            <span style={{ fontSize: 10, color: 'var(--text3)' }}>{m.thru > 0 ? `jugados ${m.thru}` : 'sin jugar'}</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ flex: 1, textAlign: 'right', fontSize: 13, fontWeight: leadFirst ? 700 : 400, color: leadFirst ? '#2dd4bf' : 'var(--text2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.left}</span>
+                            <span style={{ flexShrink: 0, minWidth: 42, textAlign: 'center', fontFamily: 'var(--display)', fontSize: 13, fontWeight: 700, color: badgeColor, background: `${badgeColor}1a`, borderRadius: 6, padding: '3px 6px' }}>{badge}</span>
+                            <span style={{ flex: 1, textAlign: 'left', fontSize: 13, fontWeight: leadSecond ? 700 : 400, color: leadSecond ? '#f87171' : 'var(--text2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.right}</span>
+                          </div>
+                        </div>
+                      </button>
+                      {open && (
+                        <div style={{ padding: '0 12px 12px' }}>
+                          {m.content}
+                          <div style={{ marginTop: 4, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px' }}>
+                            <div style={{ fontSize: 10, letterSpacing: 1, color: 'var(--text3)', marginBottom: 8 }}>ESTADÍSTICA · NETO (HCP {m.pct}%)</div>
+                            {m.stats.map(s => (
+                              <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12, padding: '3px 0' }}>
+                                <span style={{ color: 'var(--text2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, marginRight: 8 }}>{s.name}</span>
+                                <span style={{ color: 'var(--text3)', flexShrink: 0 }}>
+                                  {s.avgNet === null ? '—' : <>neto/hoyo <strong style={{ color: 'var(--text)' }}>{s.avgNet.toFixed(1)}</strong> · vs par <strong style={{ color: (s.avgVsPar ?? 0) <= 0 ? '#2dd4bf' : '#f87171' }}>{(s.avgVsPar ?? 0) >= 0 ? '+' : ''}{(s.avgVsPar ?? 0).toFixed(1)}</strong></>}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )
                 })}
-                <div style={{ fontSize: 11, color: 'var(--text3)', paddingTop: 4 }}>
-                  El punto verde indica ventaja en ese hoyo. Fila <strong style={{ color: 'var(--text2)' }}>ESTADO</strong>: positivo = primer equipo/jugador arriba, negativo = abajo.
+                <div style={{ fontSize: 11, color: 'var(--text3)', paddingTop: 4, lineHeight: 1.5 }}>
+                  Toca un partido para ver el detalle hoyo a hoyo y su estadística. El número es cuántos hoyos arriba va el lado resaltado; <strong style={{ color: 'var(--text2)' }}>AS</strong> = empate. «vs par» = promedio del score neto menos el par del hoyo (negativo = bajo par).
                 </div>
               </div>
             )
