@@ -799,22 +799,34 @@ export default function RoundPage() {
                 }
               })
             ]
-            const leads1 = matches.filter(m => (m.status ?? 0) > 0).length
-            const leads2 = matches.filter(m => (m.status ?? 0) < 0).length
+            // Puntos Ryder: dobles vale 2, cada individual 1 (6 en total). Empate parte el valor.
+            let pts1 = 0, pts2 = 0
+            matches.forEach(m => {
+              const val = m.key === 'dobles' ? 2 : 1
+              if (m.status === null) return
+              if (m.status > 0) pts1 += val
+              else if (m.status < 0) pts2 += val
+              else { pts1 += val / 2; pts2 += val / 2 }
+            })
             const ties = matches.filter(m => m.status === 0).length
+            const fmtPts = (n: number) => n.toLocaleString('es-CL')
 
             return (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
                   <div style={{ flex: 1, textAlign: 'center', background: 'var(--surface)', border: '1px solid #2dd4bf33', borderRadius: 10, padding: '8px 6px' }}>
                     <div style={{ fontSize: 10, color: 'var(--text3)', letterSpacing: 1 }}>EQUIPO 1</div>
-                    <div style={{ fontFamily: 'var(--display)', fontSize: 24, fontWeight: 700, color: '#2dd4bf', lineHeight: 1.1 }}>{leads1}</div>
+                    <div style={{ fontFamily: 'var(--display)', fontSize: 24, fontWeight: 700, color: '#2dd4bf', lineHeight: 1.1 }}>{fmtPts(pts1)}</div>
                     <div style={{ fontSize: 10, color: 'var(--text3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{team1.map(p => p.name).join(' y ')}</div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', color: 'var(--text3)', fontSize: 11, minWidth: 40, justifyContent: 'center', textAlign: 'center' }}>{ties > 0 ? `${ties} AS` : 'vs'}</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text3)', fontSize: 10, minWidth: 44, textAlign: 'center', lineHeight: 1.3 }}>
+                    <span style={{ fontWeight: 700, color: 'var(--text2)' }}>PTS</span>
+                    <span>de 6</span>
+                    {ties > 0 && <span>{ties} AS</span>}
+                  </div>
                   <div style={{ flex: 1, textAlign: 'center', background: 'var(--surface)', border: '1px solid #f8717133', borderRadius: 10, padding: '8px 6px' }}>
                     <div style={{ fontSize: 10, color: 'var(--text3)', letterSpacing: 1 }}>EQUIPO 2</div>
-                    <div style={{ fontFamily: 'var(--display)', fontSize: 24, fontWeight: 700, color: '#f87171', lineHeight: 1.1 }}>{leads2}</div>
+                    <div style={{ fontFamily: 'var(--display)', fontSize: 24, fontWeight: 700, color: '#f87171', lineHeight: 1.1 }}>{fmtPts(pts2)}</div>
                     <div style={{ fontSize: 10, color: 'var(--text3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{team2.map(p => p.name).join(' y ')}</div>
                   </div>
                 </div>
@@ -835,7 +847,7 @@ export default function RoundPage() {
                         <span style={{ color: m.color, fontSize: 12, width: 12, flexShrink: 0 }}>{open ? '▾' : '▸'}</span>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-                            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1, color: m.color }}>{m.label}</span>
+                            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1, color: m.color }}>{m.label} · {m.key === 'dobles' ? '2 pts' : '1 pt'}</span>
                             <span style={{ fontSize: 10, color: 'var(--text3)' }}>{m.thru > 0 ? `jugados ${m.thru}` : 'sin jugar'}</span>
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
