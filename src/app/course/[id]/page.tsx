@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase, Course, Hole } from '@/lib/supabase'
+import TopBar from '@/components/TopBar'
 
 export default function CourseDetail() {
   const { id } = useParams<{ id: string }>()
@@ -55,13 +56,13 @@ export default function CourseDetail() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+      <TopBar />
       <header style={{
         background: 'var(--surface)', borderBottom: '1px solid var(--border)',
         padding: '20px 20px 16px'
       }}>
         <div style={{ maxWidth: 640, margin: '0 auto' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-            <Link href="/course" style={{ color: 'var(--text3)', fontSize: 20 }}>←</Link>
             <div style={{ flex: 1 }}>
               {editing ? (
                 <input

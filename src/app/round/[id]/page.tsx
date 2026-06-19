@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase, Round, RoundPlayer, Score, Hole, Course } from '@/lib/supabase'
+import TopBar from '@/components/TopBar'
 import {
   calcStroke, calcMatchPlay, calcMatchPlayDobles, calcBismarck,
   calcCombinado4, calcCombinadoBismarck, getExtraStrokes, getRelativeExtra,
@@ -238,10 +239,10 @@ export default function RoundPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+      <TopBar />
       <header style={{ background: 'linear-gradient(135deg, #0a1f0f 0%, #071409 100%)', borderBottom: '1px solid var(--border)', padding: '18px 16px 14px' }}>
         <div style={{ maxWidth: 800, margin: '0 auto' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-            <Link href="/" style={{ color: 'var(--text3)', fontSize: 18 }}>←</Link>
             <div>
               <h1 style={{ fontFamily: 'var(--display)', fontSize: 22, letterSpacing: 1, lineHeight: 1 }}>{course?.name}{secondCourse ? (
                 <span style={{ fontSize: 14, color: 'var(--text3)', display: 'block', marginTop: 4, letterSpacing: 0 }}>

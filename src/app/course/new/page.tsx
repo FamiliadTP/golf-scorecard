@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import TopBar from '@/components/TopBar'
 import { supabase } from '@/lib/supabase'
 
 const inputStyle = {
@@ -81,15 +82,7 @@ export default function NewCourse() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-      <header style={{
-        background: 'var(--surface)', borderBottom: '1px solid var(--border)',
-        padding: '20px 20px 16px'
-      }}>
-        <div style={{ maxWidth: 640, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 12 }}>
-          <Link href="/course" style={{ color: 'var(--text3)', fontSize: 20 }}>←</Link>
-          <h1 style={{ fontFamily: 'var(--display)', fontSize: 26, letterSpacing: 2 }}>NUEVO CAMPO</h1>
-        </div>
-      </header>
+      <TopBar title="Nuevo Campo" />
 
       <main style={{ maxWidth: 640, margin: '0 auto', padding: '24px 16px' }}>
         {/* Course info */}

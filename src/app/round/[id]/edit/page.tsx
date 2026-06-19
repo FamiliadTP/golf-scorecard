@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import TopBar from '@/components/TopBar'
 import { supabase, Course, GameMode, Round, RoundPlayer } from '@/lib/supabase'
 
 const PLAYER_COLORS = ['#2dd4bf', '#f59e0b', '#a78bfa', '#f87171']
@@ -147,12 +148,7 @@ export default function EditRound() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-      <header style={{ background: 'linear-gradient(135deg, #0a1f0f 0%, #071409 100%)', borderBottom: '1px solid var(--border)', padding: '18px 16px 14px' }}>
-        <div style={{ maxWidth: 640, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 12 }}>
-          <Link href={`/round/${id}`} style={{ color: 'var(--text3)', fontSize: 18 }}>←</Link>
-          <h1 style={{ fontFamily: 'var(--display)', fontSize: 22, letterSpacing: 2 }}>EDITAR PARTIDA</h1>
-        </div>
-      </header>
+      <TopBar title="Editar Partida" />
 
       <main style={{ maxWidth: 640, margin: '0 auto', padding: '24px 16px', display: 'flex', flexDirection: 'column', gap: 20 }}>
 
