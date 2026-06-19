@@ -1272,7 +1272,7 @@ export default function RoundPage() {
         )}
 
         {activeTab === 'hist' && (
-          <CourseStats courseId={r.course_id} />
+          <CourseStats courseId={r.course_id} currentRoundId={r.id} />
         )}
       </main>
 
