@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase, Round, RoundPlayer, Score, Hole, Course } from '@/lib/supabase'
 import TopBar from '@/components/TopBar'
+import CourseStats from '@/components/CourseStats'
 import {
   calcStroke, calcMatchPlay, calcMatchPlayDobles, calcBismarck,
   calcCombinado4, calcCombinadoBismarck, getExtraStrokes, getRelativeExtra,
@@ -127,7 +128,7 @@ export default function RoundPage() {
   const [holes, setHoles] = useState<Hole[]>([])
   const [course, setCourse] = useState<Course | null>(null)
   const [secondCourse, setSecondCourse] = useState<Course | null>(null)
-  const [activeTab, setActiveTab] = useState<'card' | 'neto' | 'results'>('card')
+  const [activeTab, setActiveTab] = useState<'card' | 'neto' | 'results' | 'hist'>('card')
   const [openMatches, setOpenMatches] = useState<Record<string, boolean>>({})
   const toggleMatch = (k: string) => setOpenMatches(m => ({ ...m, [k]: !m[k] }))
   const [loading, setLoading] = useState(true)
@@ -229,14 +230,54 @@ export default function RoundPage() {
   const front9 = holes.slice(0, 9)
   const back9 = holes.length > 9 ? holes.slice(9) : []
 
+  // Puntos Ryder: dobles vale 2, cada individual 1 (6 en total). Empate parte el valor.
+  const ryderPoints = (() => {
+    if (!combinado4Result) return null
+    const played = (ps: typeof players) => holes.some(h => ps.some(p => getScore(p.id, h.hole_number) !== null))
+    const tm1 = players.filter(p => p.team === 1)
+    const tm2 = players.filter(p => p.team === 2)
+    let t1 = 0, t2 = 0
+    if (played([...tm1, ...tm2])) {
+      const d = combinado4Result.dobles
+      if (d) {
+        if (d.leadingTeam === 1) t1 += 2
+        else if (d.leadingTeam === 2) t2 += 2
+        else { t1 += 1; t2 += 1 }
+      } else if (combinado4Result.doblesStroke) {
+        const best = (t: number) => Math.max(0, ...players.filter(p => p.team === t).map(p => combinado4Result.doblesStroke!.find(rr => rr.playerId === p.id)?.stableford ?? 0))
+        const b1 = best(1), b2 = best(2)
+        if (b1 > b2) t1 += 2; else if (b2 > b1) t2 += 2; else { t1 += 1; t2 += 1 }
+      }
+    }
+    const indivPts: Record<number, { t1: number; t2: number }> = {}
+    combinado4Result.individuales.forEach(({ p1, p2, match, stroke }, idx) => {
+      let a = 0, b = 0
+      if (p1 && p2 && played([p1, p2])) {
+        if (match) {
+          if (match.leaderId === p1.id) a = 1
+          else if (match.leaderId === p2.id) b = 1
+          else { a = 0.5; b = 0.5 }
+        } else if (stroke) {
+          const s1 = stroke.p1?.stableford ?? 0, s2 = stroke.p2?.stableford ?? 0
+          if (s1 > s2) a = 1; else if (s2 > s1) b = 1; else { a = 0.5; b = 0.5 }
+        }
+      }
+      indivPts[idx] = { t1: a, t2: b }
+      t1 += a; t2 += b
+    })
+    return { t1, t2, indivPts }
+  })()
+  const fmtPts = (n: number) => n.toLocaleString('es-CL')
+
   const showNetoTab = MODES_WITH_HCP.includes(r.mode)
 
   // Build tabs
-  type Tab = 'card' | 'neto' | 'results'
+  type Tab = 'card' | 'neto' | 'results' | 'hist'
   const tabs: { key: Tab; label: string }[] = [
     { key: 'card', label: 'Gross' },
     ...(showNetoTab ? [{ key: 'neto' as Tab, label: 'Score Neto' }] : []),
     { key: 'results', label: 'Resultados' },
+    { key: 'hist', label: 'Histórico' },
   ]
 
   return (
@@ -1093,9 +1134,27 @@ export default function RoundPage() {
             {/* RYDER (combinado 4) */}
             {r.mode === 'combinado_4' && combinado4Result && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {ryderPoints && (
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
+                    <div style={{ flex: 1, textAlign: 'center', background: 'var(--surface)', border: '1px solid #2dd4bf33', borderRadius: 12, padding: '12px 8px' }}>
+                      <div style={{ fontSize: 10, color: 'var(--text3)', letterSpacing: 1 }}>EQUIPO 1</div>
+                      <div style={{ fontFamily: 'var(--display)', fontSize: 30, fontWeight: 700, color: '#2dd4bf', lineHeight: 1.1 }}>{fmtPts(ryderPoints.t1)}</div>
+                      <div style={{ fontSize: 10, color: 'var(--text3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{players.filter(p => p.team === 1).map(p => p.name).join(' y ')}</div>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text3)', fontSize: 10, minWidth: 44 }}>
+                      <span style={{ fontWeight: 700, color: 'var(--text2)' }}>PTS</span><span>de 6</span>
+                    </div>
+                    <div style={{ flex: 1, textAlign: 'center', background: 'var(--surface)', border: '1px solid #f8717133', borderRadius: 12, padding: '12px 8px' }}>
+                      <div style={{ fontSize: 10, color: 'var(--text3)', letterSpacing: 1 }}>EQUIPO 2</div>
+                      <div style={{ fontFamily: 'var(--display)', fontSize: 30, fontWeight: 700, color: '#f87171', lineHeight: 1.1 }}>{fmtPts(ryderPoints.t2)}</div>
+                      <div style={{ fontSize: 10, color: 'var(--text3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{players.filter(p => p.team === 2).map(p => p.name).join(' y ')}</div>
+                    </div>
+                  </div>
+                )}
                 <div style={{ background: 'var(--surface)', border: '1px solid #34d39930', borderRadius: 12, overflow: 'hidden' }}>
-                  <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontFamily: 'var(--display)', fontSize: 14, letterSpacing: 2, color: '#34d399' }}>
-                    DOBLES — {((r as any).dobles_mode === 'stroke' ? 'STROKE' : 'MATCH PLAY')} · HCP {(r as any).dobles_hcp_pct}%
+                  <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontFamily: 'var(--display)', fontSize: 14, letterSpacing: 2, color: '#34d399', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>DOBLES — {((r as any).dobles_mode === 'stroke' ? 'STROKE' : 'MATCH PLAY')} · HCP {(r as any).dobles_hcp_pct}%</span>
+                    <span style={{ fontFamily: 'var(--body)', fontSize: 11, color: 'var(--text3)', letterSpacing: 0 }}>vale 2 pts</span>
                   </div>
                   <div style={{ padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     {(() => {
@@ -1130,18 +1189,43 @@ export default function RoundPage() {
                       </div>
                     )}
                   </div>
+                  <div style={{ padding: '8px 16px', borderTop: '1px solid var(--border)', textAlign: 'right', fontSize: 11, fontWeight: 700 }}>
+                    {(() => {
+                      const anyScore = holes.some(h => players.some(p => getScore(p.id, h.hole_number) !== null))
+                      if (!anyScore) return <span style={{ color: 'var(--text3)' }}>sin definir</span>
+                      let lead: number | null = null
+                      const d = combinado4Result.dobles
+                      if (d) lead = d.leadingTeam
+                      else if (combinado4Result.doblesStroke) {
+                        const best = (t: number) => Math.max(0, ...players.filter(p => p.team === t).map(p => combinado4Result.doblesStroke!.find(rr => rr.playerId === p.id)?.stableford ?? 0))
+                        const b1 = best(1), b2 = best(2); lead = b1 > b2 ? 1 : b2 > b1 ? 2 : null
+                      }
+                      if (lead === 1) return <span style={{ color: '#2dd4bf' }}>2 pts · Equipo 1</span>
+                      if (lead === 2) return <span style={{ color: '#f87171' }}>2 pts · Equipo 2</span>
+                      return <span style={{ color: 'var(--text3)' }}>1 y 1 · AS</span>
+                    })()}
+                  </div>
                 </div>
 
                 <div style={{ background: 'var(--surface)', border: '1px solid #f59e0b30', borderRadius: 12, overflow: 'hidden' }}>
-                  <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontFamily: 'var(--display)', fontSize: 14, letterSpacing: 2, color: '#f59e0b' }}>
-                    INDIVIDUALES — {((r as any).individual_mode === 'stroke' ? 'STROKE' : 'MATCH PLAY')} · HCP {(r as any).individual_hcp_pct}%
+                  <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontFamily: 'var(--display)', fontSize: 14, letterSpacing: 2, color: '#f59e0b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>INDIVIDUALES — {((r as any).individual_mode === 'stroke' ? 'STROKE' : 'MATCH PLAY')} · HCP {(r as any).individual_hcp_pct}%</span>
+                    <span style={{ fontFamily: 'var(--body)', fontSize: 11, color: 'var(--text3)', letterSpacing: 0 }}>1 pt c/u</span>
                   </div>
                   <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {combinado4Result.individuales.map(({ p1, p2, match, stroke }, idx) => {
                       const pi1 = players.findIndex(p => p.id === p1?.id)
                       const pi2 = players.findIndex(p => p.id === p2?.id)
                       if (!p1 || !p2) return null
-                      return <IndividualResultCard key={idx} p1={p1} p2={p2} match={match} stroke={stroke} pi1={pi1} pi2={pi2} />
+                      const pts = ryderPoints?.indivPts[idx] || { t1: 0, t2: 0 }
+                      const ptsLabel = pts.t1 === 1 ? `1 pt · ${p1.name}` : pts.t2 === 1 ? `1 pt · ${p2.name}` : (pts.t1 === 0.5 ? '0,5 y 0,5 · AS' : 'sin definir')
+                      const ptsColor = pts.t1 === 1 ? PLAYER_COLORS[pi1] : pts.t2 === 1 ? PLAYER_COLORS[pi2] : 'var(--text3)'
+                      return (
+                        <div key={idx}>
+                          <IndividualResultCard p1={p1} p2={p2} match={match} stroke={stroke} pi1={pi1} pi2={pi2} />
+                          <div style={{ textAlign: 'right', fontSize: 11, fontWeight: 700, color: ptsColor, padding: '3px 4px 0' }}>{ptsLabel}</div>
+                        </div>
+                      )
                     })}
                   </div>
                 </div>
@@ -1185,6 +1269,10 @@ export default function RoundPage() {
             )}
 
           </div>
+        )}
+
+        {activeTab === 'hist' && (
+          <CourseStats courseId={r.course_id} />
         )}
       </main>
 

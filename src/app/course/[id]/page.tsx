@@ -5,6 +5,8 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase, Course, Hole } from '@/lib/supabase'
 import TopBar from '@/components/TopBar'
+import CourseStats from '@/components/CourseStats'
+import { isAdminUnlocked, tryUnlockAdmin } from '@/lib/admin'
 
 export default function CourseDetail() {
   const { id } = useParams<{ id: string }>()
@@ -13,6 +15,33 @@ export default function CourseDetail() {
   const [holes, setHoles] = useState<Hole[]>([])
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
+  // Borrar campo (protegido con clave de admin)
+  const [delStep, setDelStep] = useState<'idle' | 'pin' | 'confirm'>('idle')
+  const [pinInput, setPinInput] = useState('')
+  const [pinError, setPinError] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [delError, setDelError] = useState<string | null>(null)
+
+  const startDelete = () => {
+    setDelError(null)
+    if (isAdminUnlocked()) setDelStep('confirm')
+    else { setPinInput(''); setPinError(false); setDelStep('pin') }
+  }
+  const submitPin = () => {
+    if (tryUnlockAdmin(pinInput.trim())) setDelStep('confirm')
+    else setPinError(true)
+  }
+  const confirmDelete = async () => {
+    setDeleting(true); setDelError(null)
+    const { error } = await supabase.from('courses').delete().eq('id', id)
+    setDeleting(false)
+    if (error) {
+      setDelError('No se pudo eliminar. Probablemente el campo tiene partidas asociadas; primero hay que borrar esas partidas.')
+      setDelStep('idle')
+      return
+    }
+    router.push('/course')
+  }
 
   useEffect(() => {
     supabase.from('courses').select('*, holes(*)')
@@ -144,7 +173,63 @@ export default function CourseDetail() {
             </div>
           ))}
         </div>
+
+        {/* Histórico por hoyo de la cancha */}
+        <div style={{ marginTop: 24 }}>
+          <CourseStats courseId={id} />
+        </div>
+
+        {/* Zona de peligro — borrar campo (solo admin) */}
+        <div style={{ marginTop: 24, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
+          {delError && (
+            <div style={{ marginBottom: 12, padding: '10px 12px', borderRadius: 8, background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.25)', fontSize: 12, color: '#f87171' }}>{delError}</div>
+          )}
+          <button onClick={startDelete} style={{
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+            background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.25)',
+            color: '#f87171', borderRadius: 8, padding: '9px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer'
+          }}>🗑️ Eliminar campo</button>
+          <p style={{ fontSize: 11, color: 'var(--text3)', marginTop: 8 }}>Requiere clave de administrador.</p>
+        </div>
       </main>
+
+      {/* Modal: clave de admin */}
+      {delStep === 'pin' && (
+        <div onClick={() => setDelStep('idle')} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 20 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 22, maxWidth: 320, width: '100%' }}>
+            <h3 style={{ fontFamily: 'var(--display)', fontSize: 16, letterSpacing: 1, marginBottom: 10 }}>CLAVE DE ADMINISTRADOR</h3>
+            <p style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 14 }}>Ingresa la clave para poder borrar campos en esta sesión.</p>
+            <input
+              type="password" inputMode="numeric" autoFocus value={pinInput}
+              onChange={e => { setPinInput(e.target.value); setPinError(false) }}
+              onKeyDown={e => { if (e.key === 'Enter') submitPin() }}
+              placeholder="Clave"
+              style={{ width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,0.04)', border: `1px solid ${pinError ? '#f87171' : 'var(--border)'}`, borderRadius: 8, color: 'var(--text)', padding: '10px 12px', fontSize: 16, outline: 'none', marginBottom: pinError ? 6 : 14 }}
+            />
+            {pinError && <p style={{ fontSize: 12, color: '#f87171', marginBottom: 14 }}>Clave incorrecta.</p>}
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => setDelStep('idle')} style={{ flex: 1, padding: '10px', borderRadius: 8, background: 'transparent', border: '1px solid var(--border2)', color: 'var(--text2)', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>Cancelar</button>
+              <button onClick={submitPin} style={{ flex: 1, padding: '10px', borderRadius: 8, background: '#2dd4bf', border: 'none', color: '#071209', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>Continuar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: confirmar borrado */}
+      {delStep === 'confirm' && (
+        <div onClick={() => setDelStep('idle')} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 20 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--surface)', border: '1px solid rgba(248,113,113,0.3)', borderRadius: 14, padding: 22, maxWidth: 340, width: '100%' }}>
+            <h3 style={{ fontFamily: 'var(--display)', fontSize: 16, letterSpacing: 1, marginBottom: 10, color: '#f87171' }}>ELIMINAR CAMPO</h3>
+            <p style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 16, lineHeight: 1.5 }}>
+              ¿Seguro que quieres eliminar <strong>{course.name}</strong>{course.loop_label ? ` · ${course.loop_label}` : ''}? Esta acción no se puede deshacer.
+            </p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => setDelStep('idle')} disabled={deleting} style={{ flex: 1, padding: '10px', borderRadius: 8, background: 'transparent', border: '1px solid var(--border2)', color: 'var(--text2)', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>Cancelar</button>
+              <button onClick={confirmDelete} disabled={deleting} style={{ flex: 1, padding: '10px', borderRadius: 8, background: '#f87171', border: 'none', color: '#1a0606', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>{deleting ? 'Eliminando…' : 'Eliminar'}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
