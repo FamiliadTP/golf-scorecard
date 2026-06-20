@@ -65,7 +65,7 @@ function RelStatusBadge({ running, concluded, concludedStatus, leftWon, label }:
 
 function PlayerChip({ name, pi, side }: { name: string; pi: number; side: 'left' | 'right' }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexDirection: side === 'right' ? 'row-reverse' : 'row', flex: 1, justifyContent: side === 'right' ? 'flex-end' : 'flex-start' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexDirection: 'row', flex: 1, justifyContent: side === 'right' ? 'flex-end' : 'flex-start' }}>
       <div style={{ width: 22, height: 22, borderRadius: '50%', background: PLAYER_BG[pi], display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, color: 'white', flexShrink: 0 }}>{name[0]?.toUpperCase()}</div>
       <span style={{ fontSize: 13, fontWeight: 600, color: PLAYER_COLORS[pi] }}>{name}</span>
     </div>
@@ -1040,17 +1040,21 @@ export default function RoundPage() {
               <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
                 <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontFamily: 'var(--display)', fontSize: 14, letterSpacing: 2, color: 'var(--text3)' }}>MATCH PLAY INDIVIDUAL</div>
                 <div style={{ padding: '16px 16px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                  {[leftP, rightP].map((p, i) => {
-                    const pi = i === 0 ? leftPi : rightPi
-                    return p ? (
-                      <div key={p.id} style={{ textAlign: 'center', flex: 1 }}>
-                        <div style={{ width: 44, height: 44, borderRadius: '50%', background: PLAYER_BG[pi], display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700, color: 'white', margin: '0 auto 8px' }}>{p.name[0]?.toUpperCase()}</div>
-                        <div style={{ fontWeight: 600, color: p.id === matchResult.leaderId ? PLAYER_COLORS[pi] : 'var(--text2)', fontSize: 14 }}>{p.name}</div>
-                        <div style={{ fontSize: 11, color: 'var(--text3)' }}>HCP {p.handicap}</div>
-                      </div>
-                    ) : null
-                  })}
+                  {leftP && (
+                    <div style={{ textAlign: 'center', flex: 1 }}>
+                      <div style={{ width: 44, height: 44, borderRadius: '50%', background: PLAYER_BG[leftPi], display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700, color: 'white', margin: '0 auto 8px' }}>{leftP.name[0]?.toUpperCase()}</div>
+                      <div style={{ fontWeight: 600, color: leftP.id === matchResult.leaderId ? PLAYER_COLORS[leftPi] : 'var(--text2)', fontSize: 14 }}>{leftP.name}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text3)' }}>HCP {leftP.handicap}</div>
+                    </div>
+                  )}
                   <RelStatusBadge running={mpRunning} concluded={matchResult.concluded} concludedStatus={matchResult.status} leftWon={mpLeftWon} label={matchResult.concluded ? '🏆 Terminado' : `${matchResult.holeResults.length} hoyos`} />
+                  {rightP && (
+                    <div style={{ textAlign: 'center', flex: 1 }}>
+                      <div style={{ width: 44, height: 44, borderRadius: '50%', background: PLAYER_BG[rightPi], display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700, color: 'white', margin: '0 auto 8px' }}>{rightP.name[0]?.toUpperCase()}</div>
+                      <div style={{ fontWeight: 600, color: rightP.id === matchResult.leaderId ? PLAYER_COLORS[rightPi] : 'var(--text2)', fontSize: 14 }}>{rightP.name}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text3)' }}>HCP {rightP.handicap}</div>
+                    </div>
+                  )}
                 </div>
                 <div style={{ borderTop: '1px solid var(--border)', padding: '10px 16px', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                   {matchResult.holeResults.map((h, idx) => {
@@ -1076,21 +1080,21 @@ export default function RoundPage() {
 
             {/* MATCH PLAY DOBLES */}
             {r.mode === 'matchplay_dobles' && doublesResult && (() => {
-              const leftTeam = 1
-              const rightTeam = 2
               const dRunning = doublesResult.holeResults.length ? doublesResult.holeResults[doublesResult.holeResults.length - 1].runningStatus : 0
               const dLeftWon = doublesResult.concluded ? doublesResult.leadingTeam === 1 : null
               return (
               <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
                 <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontFamily: 'var(--display)', fontSize: 14, letterSpacing: 2, color: 'var(--text3)' }}>MATCH PLAY DOBLES</div>
                 <div style={{ padding: '16px 16px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                  {[leftTeam, rightTeam].map(t => (
-                    <div key={t} style={{ textAlign: 'center', flex: 1 }}>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: doublesResult.leadingTeam === t ? PLAYER_COLORS[t === 1 ? 0 : 2] : 'var(--text2)', marginBottom: 4 }}>TEAM {t}</div>
-                      {players.filter(p => p.team === t).map(p => <div key={p.id} style={{ fontSize: 13, color: 'var(--text3)' }}>{p.name}</div>)}
-                    </div>
-                  ))}
+                  <div style={{ textAlign: 'center', flex: 1 }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: doublesResult.leadingTeam === 1 ? PLAYER_COLORS[0] : 'var(--text2)', marginBottom: 4 }}>TEAM 1</div>
+                    {players.filter(p => p.team === 1).map(p => <div key={p.id} style={{ fontSize: 13, color: 'var(--text3)' }}>{p.name}</div>)}
+                  </div>
                   <RelStatusBadge running={dRunning} concluded={doublesResult.concluded} concludedStatus={doublesResult.status} leftWon={dLeftWon} label={doublesResult.concluded ? '🏆 Terminado' : `${doublesResult.holeResults.length} hoyos`} />
+                  <div style={{ textAlign: 'center', flex: 1 }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: doublesResult.leadingTeam === 2 ? PLAYER_COLORS[2] : 'var(--text2)', marginBottom: 4 }}>TEAM 2</div>
+                    {players.filter(p => p.team === 2).map(p => <div key={p.id} style={{ fontSize: 13, color: 'var(--text3)' }}>{p.name}</div>)}
+                  </div>
                 </div>
                 <div style={{ borderTop: '1px solid var(--border)', padding: '10px 16px', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                   {doublesResult.holeResults.map((h, idx) => {
@@ -1159,13 +1163,11 @@ export default function RoundPage() {
                     <span>DOBLES — {((r as any).dobles_mode === 'stroke' ? 'STROKE' : 'MATCH PLAY')} · HCP {(r as any).dobles_hcp_pct}%</span>
                     <span style={{ fontFamily: 'var(--body)', fontSize: 11, color: 'var(--text3)', letterSpacing: 0 }}>vale 2 pts</span>
                   </div>
-                  <div style={{ padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    {[1, 2].map(t => (
-                      <div key={t} style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: PLAYER_COLORS[t === 1 ? 0 : 2], marginBottom: 4 }}>TEAM {t}</div>
-                        {players.filter(p => p.team === t).map(p => <div key={p.id} style={{ fontSize: 13, color: 'var(--text3)' }}>{p.name}</div>)}
-                      </div>
-                    ))}
+                  <div style={{ padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: PLAYER_COLORS[0], marginBottom: 4 }}>TEAM 1</div>
+                      {players.filter(p => p.team === 1).map(p => <div key={p.id} style={{ fontSize: 13, color: 'var(--text3)' }}>{p.name}</div>)}
+                    </div>
                     {combinado4Result.dobles && (
                       <RelStatusBadge
                         running={combinado4Result.dobles.holeResults.length ? combinado4Result.dobles.holeResults[combinado4Result.dobles.holeResults.length - 1].runningStatus : 0}
@@ -1192,6 +1194,10 @@ export default function RoundPage() {
                         })}
                       </div>
                     )}
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: PLAYER_COLORS[2], marginBottom: 4 }}>TEAM 2</div>
+                      {players.filter(p => p.team === 2).map(p => <div key={p.id} style={{ fontSize: 13, color: 'var(--text3)' }}>{p.name}</div>)}
+                    </div>
                   </div>
                   <div style={{ padding: '8px 16px', borderTop: '1px solid var(--border)', textAlign: 'right', fontSize: 11, fontWeight: 700 }}>
                     {(() => {
