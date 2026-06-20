@@ -43,11 +43,22 @@ function ScoreBadge({ strokes, par }: { strokes: number | null; par: number }) {
   )
 }
 
-function MatchStatusBadge({ status, concluded, label }: { status: string; concluded: boolean; label: string }) {
+// Estado del match relativo SIEMPRE al lado izquierdo (Jugador 1 / Equipo 1).
+// En vivo: running>0 => "X UP", running<0 => "X DOWN", 0 => "ALL SQUARE".
+// Terminado: resultado real (X&Y) en verde si gana la izquierda, rojo si pierde.
+function relStatusDisplay(running: number, concluded: boolean, concludedStatus: string, leftWon: boolean | null) {
+  if (concluded) return { text: concludedStatus, color: leftWon ? '#34d399' : '#f87171' }
+  if (running > 0) return { text: `${running} UP`, color: '#2dd4bf' }
+  if (running < 0) return { text: `${-running} DOWN`, color: '#2dd4bf' }
+  return { text: 'ALL SQUARE', color: '#2dd4bf' }
+}
+
+function RelStatusBadge({ running, concluded, concludedStatus, leftWon, label }: { running: number; concluded: boolean; concludedStatus: string; leftWon: boolean | null; label: string }) {
+  const { text, color } = relStatusDisplay(running, concluded, concludedStatus, leftWon)
   return (
     <div style={{ textAlign: 'center' }}>
       <div style={{ fontSize: 10, color: 'var(--text3)', marginBottom: 4 }}>{label}</div>
-      <div style={{ fontFamily: 'var(--display)', fontSize: 22, letterSpacing: 1, color: concluded ? '#f59e0b' : '#2dd4bf' }}>{status}</div>
+      <div style={{ fontFamily: 'var(--display)', fontSize: 22, letterSpacing: 1, color }}>{text}</div>
     </div>
   )
 }
@@ -62,26 +73,18 @@ function PlayerChip({ name, pi, side }: { name: string; pi: number; side: 'left'
 }
 
 function IndividualResultCard({ p1, p2, match, stroke, pi1, pi2 }: any) {
-  // Determine winner for match play
-  const winnerId = match?.concluded ? match.leaderId : null
-  const loser = winnerId === p1.id ? p2 : winnerId === p2.id ? p1 : null
-  const winner = winnerId === p1.id ? p1 : winnerId === p2.id ? p2 : null
-  const winnerPi = winnerId === p1.id ? pi1 : pi2
-  const loserPi = winnerId === p1.id ? pi2 : pi1
-
   if (match) {
-    // Show: [winner chip] [score] [loser chip]  or  [p1] [score] [p2] if all square
-    const isAllSquare = match.status === 'AS' || match.status === 'ALL SQUARE'
-    const leftP = isAllSquare ? p1 : (winner || p1)
-    const leftPi = isAllSquare ? pi1 : winnerPi
-    const rightP = isAllSquare ? p2 : (loser || p2)
-    const rightPi = isAllSquare ? pi2 : loserPi
+    // Jugador 1 (equipo 1) SIEMPRE a la izquierda, Jugador 2 a la derecha.
+    // Centro relativo al jugador 1: UP / DOWN / ALL SQUARE en vivo; resultado real (X&Y) al terminar.
+    const running = match.holeResults.length ? match.holeResults[match.holeResults.length - 1].runningStatus : 0
+    const leftWon = match.concluded ? match.leaderId === p1.id : null
+    const { text, color } = relStatusDisplay(running, match.concluded, match.status, leftWon)
     return (
       <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 14px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <PlayerChip name={leftP.name} pi={leftPi} side="left" />
-          <div style={{ fontFamily: 'var(--display)', fontSize: 20, color: match.concluded ? '#f59e0b' : '#2dd4bf', minWidth: 52, textAlign: 'center', flexShrink: 0 }}>{match.status}</div>
-          <PlayerChip name={rightP.name} pi={rightPi} side="right" />
+          <PlayerChip name={p1.name} pi={pi1} side="left" />
+          <div style={{ fontFamily: 'var(--display)', fontSize: 20, color, minWidth: 52, textAlign: 'center', flexShrink: 0 }}>{text}</div>
+          <PlayerChip name={p2.name} pi={pi2} side="right" />
         </div>
       </div>
     )
@@ -1027,13 +1030,12 @@ export default function RoundPage() {
 
             {/* MATCH PLAY INDIVIDUAL */}
             {r.mode === 'matchplay_individual' && matchResult && (() => {
-              const winner = matchResult.concluded && matchResult.leaderId
-                ? players.find(p => p.id === matchResult.leaderId) : null
-              const loser = winner ? players.find(p => p.id !== winner.id) : null
-              const leftP = winner || players[0]
-              const rightP = loser || players[1]
-              const leftPi = players.findIndex(p => p.id === leftP?.id)
-              const rightPi = players.findIndex(p => p.id === rightP?.id)
+              const leftP = players[0]
+              const rightP = players[1]
+              const leftPi = 0
+              const rightPi = 1
+              const mpRunning = matchResult.holeResults.length ? matchResult.holeResults[matchResult.holeResults.length - 1].runningStatus : 0
+              const mpLeftWon = matchResult.concluded ? matchResult.leaderId === players[0]?.id : null
               return (
               <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
                 <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontFamily: 'var(--display)', fontSize: 14, letterSpacing: 2, color: 'var(--text3)' }}>MATCH PLAY INDIVIDUAL</div>
@@ -1048,7 +1050,7 @@ export default function RoundPage() {
                       </div>
                     ) : null
                   })}
-                  <MatchStatusBadge status={matchResult.status} concluded={matchResult.concluded} label={matchResult.concluded ? '🏆 Terminado' : `${matchResult.holeResults.length} hoyos`} />
+                  <RelStatusBadge running={mpRunning} concluded={matchResult.concluded} concludedStatus={matchResult.status} leftWon={mpLeftWon} label={matchResult.concluded ? '🏆 Terminado' : `${matchResult.holeResults.length} hoyos`} />
                 </div>
                 <div style={{ borderTop: '1px solid var(--border)', padding: '10px 16px', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                   {matchResult.holeResults.map((h, idx) => {
@@ -1074,9 +1076,10 @@ export default function RoundPage() {
 
             {/* MATCH PLAY DOBLES */}
             {r.mode === 'matchplay_dobles' && doublesResult && (() => {
-              const winnerTeam = doublesResult.concluded ? doublesResult.leadingTeam : null
-              const leftTeam = winnerTeam || 1
-              const rightTeam = leftTeam === 1 ? 2 : 1
+              const leftTeam = 1
+              const rightTeam = 2
+              const dRunning = doublesResult.holeResults.length ? doublesResult.holeResults[doublesResult.holeResults.length - 1].runningStatus : 0
+              const dLeftWon = doublesResult.concluded ? doublesResult.leadingTeam === 1 : null
               return (
               <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
                 <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontFamily: 'var(--display)', fontSize: 14, letterSpacing: 2, color: 'var(--text3)' }}>MATCH PLAY DOBLES</div>
@@ -1087,7 +1090,7 @@ export default function RoundPage() {
                       {players.filter(p => p.team === t).map(p => <div key={p.id} style={{ fontSize: 13, color: 'var(--text3)' }}>{p.name}</div>)}
                     </div>
                   ))}
-                  <MatchStatusBadge status={doublesResult.status} concluded={doublesResult.concluded} label={doublesResult.concluded ? '🏆 Terminado' : `${doublesResult.holeResults.length} hoyos`} />
+                  <RelStatusBadge running={dRunning} concluded={doublesResult.concluded} concludedStatus={doublesResult.status} leftWon={dLeftWon} label={doublesResult.concluded ? '🏆 Terminado' : `${doublesResult.holeResults.length} hoyos`} />
                 </div>
                 <div style={{ borderTop: '1px solid var(--border)', padding: '10px 16px', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                   {doublesResult.holeResults.map((h, idx) => {
@@ -1157,19 +1160,20 @@ export default function RoundPage() {
                     <span style={{ fontFamily: 'var(--body)', fontSize: 11, color: 'var(--text3)', letterSpacing: 0 }}>vale 2 pts</span>
                   </div>
                   <div style={{ padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    {(() => {
-                      const winnerTeam = combinado4Result.dobles?.concluded ? combinado4Result.dobles.leadingTeam : null
-                      const leftTeam = winnerTeam || 1
-                      const rightTeam = leftTeam === 1 ? 2 : 1
-                      return [leftTeam, rightTeam].map(t => (
-                        <div key={t} style={{ textAlign: 'center' }}>
-                          <div style={{ fontSize: 12, fontWeight: 600, color: PLAYER_COLORS[t === 1 ? 0 : 2], marginBottom: 4 }}>TEAM {t}</div>
-                          {players.filter(p => p.team === t).map(p => <div key={p.id} style={{ fontSize: 13, color: 'var(--text3)' }}>{p.name}</div>)}
-                        </div>
-                      ))
-                    })()}
+                    {[1, 2].map(t => (
+                      <div key={t} style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: PLAYER_COLORS[t === 1 ? 0 : 2], marginBottom: 4 }}>TEAM {t}</div>
+                        {players.filter(p => p.team === t).map(p => <div key={p.id} style={{ fontSize: 13, color: 'var(--text3)' }}>{p.name}</div>)}
+                      </div>
+                    ))}
                     {combinado4Result.dobles && (
-                      <MatchStatusBadge status={combinado4Result.dobles.status} concluded={combinado4Result.dobles.concluded} label={combinado4Result.dobles.concluded ? '🏆 Terminado' : 'En juego'} />
+                      <RelStatusBadge
+                        running={combinado4Result.dobles.holeResults.length ? combinado4Result.dobles.holeResults[combinado4Result.dobles.holeResults.length - 1].runningStatus : 0}
+                        concluded={combinado4Result.dobles.concluded}
+                        concludedStatus={combinado4Result.dobles.status}
+                        leftWon={combinado4Result.dobles.concluded ? combinado4Result.dobles.leadingTeam === 1 : null}
+                        label={combinado4Result.dobles.concluded ? '🏆 Terminado' : 'En juego'}
+                      />
                     )}
                     {combinado4Result.doblesStroke && (
                       <div style={{ display: 'flex', gap: 16 }}>
