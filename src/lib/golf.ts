@@ -222,6 +222,68 @@ export function calcMatchPlayDobles(
   return { holeResults, status, leadingTeam, concluded }
 }
 
+// ─── Mejor, Peor y Suma (parejas, neto) ──────────────────────────────
+// Cada hoyo reparte hasta 4 puntos entre las dos parejas (neto, menor gana):
+//   Mejor (best ball) = 2 pts · Suma (suma de los 2 netos) = 1 pt · Peor (worst ball) = 1 pt
+// Empate en una categoría = 0 a ambos. El acumulado (margin) es el saldo a favor
+// del Equipo 1: positivo = Equipo 1 arriba, negativo = Equipo 2 arriba.
+
+export interface MpsHoleResult {
+  hole: number
+  nets: { playerId: string; net: number | null }[]
+  t1: { best: number; worst: number; sum: number } | null
+  t2: { best: number; worst: number; sum: number } | null
+  winners: { mejor: 0 | 1 | 2; suma: 0 | 1 | 2; peor: 0 | 1 | 2 } // 0 empate, 1 Eq1, 2 Eq2
+  pts1: number
+  pts2: number
+  margin: number // acumulado Eq1 − Eq2 tras este hoyo
+}
+
+export interface MpsResult {
+  holeResults: MpsHoleResult[]
+  totalT1: number
+  totalT2: number
+  margin: number
+}
+
+export function calcMejorPeorSuma(
+  players: RoundPlayer[], scores: Score[], holes: Hole[], totalHoles: number, pct: number = 100
+): MpsResult {
+  const team1 = players.filter(p => p.team === 1)
+  const team2 = players.filter(p => p.team === 2)
+  const holeResults: MpsHoleResult[] = []
+  let totalT1 = 0, totalT2 = 0, margin = 0
+
+  holes.forEach(h => {
+    const netOf = (p: RoundPlayer): number | null => {
+      const s = scores.find(sc => sc.player_id === p.id && sc.hole_number === h.hole_number)
+      if (!s?.strokes) return null
+      return s.strokes - getExtraStrokes(h.handicap, p.handicap, totalHoles, pct)
+    }
+    const n1 = team1.map(netOf), n2 = team2.map(netOf)
+    const complete = team1.length === 2 && team2.length === 2 && n1.every(v => v !== null) && n2.every(v => v !== null)
+    if (!complete) return // hoyo aún no jugado por las 4 personas
+
+    const a1 = n1 as number[], a2 = n2 as number[]
+    const nets = players.map(p => {
+      const s = scores.find(sc => sc.player_id === p.id && sc.hole_number === h.hole_number)
+      return { playerId: p.id, net: s?.strokes ? s.strokes - getExtraStrokes(h.handicap, p.handicap, totalHoles, pct) : null }
+    })
+    const t1 = { best: Math.min(...a1), worst: Math.max(...a1), sum: a1[0] + a1[1] }
+    const t2 = { best: Math.min(...a2), worst: Math.max(...a2), sum: a2[0] + a2[1] }
+    const cmp = (x: number, y: number): 0 | 1 | 2 => (x < y ? 1 : y < x ? 2 : 0)
+    const winners = { mejor: cmp(t1.best, t2.best), suma: cmp(t1.sum, t2.sum), peor: cmp(t1.worst, t2.worst) }
+    let pts1 = 0, pts2 = 0
+    if (winners.mejor === 1) pts1 += 2; else if (winners.mejor === 2) pts2 += 2
+    if (winners.suma === 1) pts1 += 1; else if (winners.suma === 2) pts2 += 1
+    if (winners.peor === 1) pts1 += 1; else if (winners.peor === 2) pts2 += 1
+    totalT1 += pts1; totalT2 += pts2; margin += pts1 - pts2
+    holeResults.push({ hole: h.hole_number, nets, t1, t2, winners, pts1, pts2, margin })
+  })
+
+  return { holeResults, totalT1, totalT2, margin }
+}
+
 // ─── Bismarck ─────────────────────────────────────────────────────────
 
 export interface BismarckHoleResult {

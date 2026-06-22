@@ -11,6 +11,7 @@ const MODES: { value: GameMode; label: string; desc: string; color: string; play
   { value: 'stroke', label: 'Stroke Play', desc: 'Stableford con handicap', color: '#2dd4bf', players: '1–4 jugadores' },
   { value: 'matchplay_individual', label: 'Match Play', desc: 'Individual hoyo a hoyo', color: '#f59e0b', players: '2 jugadores' },
   { value: 'matchplay_dobles', label: 'Match Play Dobles', desc: 'Mejor bola 2 vs 2', color: '#a78bfa', players: '4 jugadores' },
+  { value: 'mejor_peor_suma', label: 'Mejor, Peor y Suma', desc: 'Parejas: best ball (2) + suma (1) + worst ball (1) por hoyo', color: '#22d3ee', players: '4 jugadores' },
   { value: 'bismarck', label: 'Bismarck', desc: '6 puntos por hoyo (4-2-0)', color: '#f87171', players: 'Exactamente 3' },
   { value: 'combinado_bismarck', label: 'Bismarck + Individuales', desc: 'Bismarck + 3 individuales', color: '#fb923c', players: 'Exactamente 3' },
 ]
@@ -119,7 +120,7 @@ export default function NewRound() {
   // Fixed player counts per mode
   const fixedCount: Record<GameMode, number | null> = {
     stroke: null, matchplay_individual: 2, matchplay_dobles: 4,
-    bismarck: 3, combinado_4: 4, combinado_bismarck: 3
+    bismarck: 3, combinado_4: 4, combinado_bismarck: 3, mejor_peor_suma: 4
   }
 
   useEffect(() => {
@@ -128,7 +129,7 @@ export default function NewRound() {
       setPlayers(prev => {
         const base = prev.slice(0, needed)
         while (base.length < needed) base.push({ name: '', handicap: 18, team: base.length < 2 ? 1 : 2 })
-        if (mode === 'combinado_4' || mode === 'matchplay_dobles') {
+        if (mode === 'combinado_4' || mode === 'matchplay_dobles' || mode === 'mejor_peor_suma') {
           return base.map((p, i) => ({ ...p, team: i < 2 ? 1 : 2 }))
         }
         return base
@@ -149,7 +150,7 @@ export default function NewRound() {
     setPlayers(prev => prev.filter((_, idx) => idx !== i))
   }
 
-  const teamBalanced = !(mode === 'combinado_4' || mode === 'matchplay_dobles') ||
+  const teamBalanced = !(mode === 'combinado_4' || mode === 'matchplay_dobles' || mode === 'mejor_peor_suma') ||
     (players.filter(p => p.team === 1).length === 2 && players.filter(p => p.team === 2).length === 2)
 
   const isValid = () => {
@@ -165,7 +166,7 @@ export default function NewRound() {
     if (!isValid() || saving) return
     setSaving(true)
     const roundData: any = { course_id: courseId, second_course_id: playTwoLoops ? secondCourseId : null, mode, holes_played: holesPlayed, date }
-    if (['stroke', 'matchplay_individual', 'matchplay_dobles', 'bismarck'].includes(mode)) roundData.hcp_pct = hcpPct
+    if (['stroke', 'matchplay_individual', 'matchplay_dobles', 'bismarck', 'mejor_peor_suma'].includes(mode)) roundData.hcp_pct = hcpPct
     if (mode === 'combinado_4') {
       roundData.dobles_mode = doblesMode; roundData.dobles_hcp_pct = doblesHcpPct
       roundData.individual_mode = individualMode; roundData.individual_hcp_pct = individualHcpPct
@@ -297,7 +298,7 @@ export default function NewRound() {
             )}
           </div>
 
-          {(mode === 'combinado_4' || mode === 'matchplay_dobles') && (
+          {(mode === 'combinado_4' || mode === 'matchplay_dobles' || mode === 'mejor_peor_suma') && (
             <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
               {[1, 2].map(t => (
                 <div key={t} style={{ flex: 1, padding: '8px 12px', borderRadius: 8, background: `${PLAYER_COLORS[t === 1 ? 0 : 2]}10`, border: `1px solid ${PLAYER_COLORS[t === 1 ? 0 : 2]}30`, fontSize: 12, color: PLAYER_COLORS[t === 1 ? 0 : 2] }}>
@@ -307,7 +308,7 @@ export default function NewRound() {
             </div>
           )}
 
-          {(mode === 'combinado_4' || mode === 'matchplay_dobles') && !teamBalanced && (
+          {(mode === 'combinado_4' || mode === 'matchplay_dobles' || mode === 'mejor_peor_suma') && !teamBalanced && (
             <div style={{ marginBottom: 14, padding: '8px 12px', borderRadius: 8, background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.25)', fontSize: 12, color: '#f87171' }}>
               Cada equipo debe tener 2 jugadores. Usa los botones T1 / T2 para asignarlos.
             </div>
@@ -315,7 +316,7 @@ export default function NewRound() {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {players.map((p, i) => {
-              const isDoubles = mode === 'combinado_4' || mode === 'matchplay_dobles'
+              const isDoubles = mode === 'combinado_4' || mode === 'matchplay_dobles' || mode === 'mejor_peor_suma'
               const teamColor = (t: number) => PLAYER_COLORS[t === 1 ? 0 : 2]
               const teamBg = (t: number) => PLAYER_BG[t === 1 ? 0 : 2]
               return (
@@ -366,7 +367,7 @@ export default function NewRound() {
                 <span style={{ flex: 1, fontSize: 14, color: p.name ? PLAYER_COLORS[i] : 'var(--text3)', fontWeight: p.name ? 600 : 400 }}>
                   {p.name || `Jugador ${i + 1}`}
                 </span>
-                {(mode === 'combinado_4' || mode === 'matchplay_dobles') && (
+                {(mode === 'combinado_4' || mode === 'matchplay_dobles' || mode === 'mejor_peor_suma') && (
                   <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 6, marginRight: 4, color: '#071209', background: PLAYER_COLORS[p.team === 1 ? 0 : 2] }}>
                     T{p.team}
                   </span>
@@ -387,7 +388,7 @@ export default function NewRound() {
         {/* 5. % HANDICAP */}
 
         {/* Modalidades simples */}
-        {['stroke', 'matchplay_individual', 'matchplay_dobles', 'bismarck'].includes(mode) && (
+        {['stroke', 'matchplay_individual', 'matchplay_dobles', 'bismarck', 'mejor_peor_suma'].includes(mode) && (
           <section style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
             <h2 style={{ fontFamily: 'var(--display)', fontSize: 14, letterSpacing: 2, color: 'var(--text3)', marginBottom: 14 }}>% HANDICAP</h2>
             <HcpPctSelector value={hcpPct} onChange={setHcpPct} />

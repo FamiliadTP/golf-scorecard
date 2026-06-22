@@ -13,7 +13,7 @@ const HCP_OPTIONS = [0, 75, 80, 100]
 const MODE_LABELS: Record<string, string> = {
   stroke: 'Stroke Play', matchplay_individual: 'Match Play',
   matchplay_dobles: 'Match Play Dobles', bismarck: 'Bismarck',
-  combinado_4: 'Ryder', combinado_bismarck: 'Bismarck + Individuales'
+  combinado_4: 'Ryder', combinado_bismarck: 'Bismarck + Individuales', mejor_peor_suma: 'Mejor, Peor y Suma'
 }
 
 const inp: React.CSSProperties = {
@@ -119,7 +119,7 @@ export default function EditRound() {
     if (!isValid() || saving) return
     setSaving(true)
     const update: any = { course_id: courseId, holes_played: holesPlayed, date }
-    if (['stroke', 'matchplay_individual', 'matchplay_dobles', 'bismarck'].includes(mode)) {
+    if (['stroke', 'matchplay_individual', 'matchplay_dobles', 'bismarck', 'mejor_peor_suma'].includes(mode)) {
       update.hcp_pct = hcpPct
     }
     if (mode === 'combinado_4') {
@@ -144,7 +144,7 @@ export default function EditRound() {
     <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text3)' }}>Cargando…</div>
   )
 
-  const isDoublesMode = mode === 'combinado_4' || mode === 'matchplay_dobles'
+  const isDoublesMode = mode === 'combinado_4' || mode === 'matchplay_dobles' || mode === 'mejor_peor_suma'
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
@@ -265,7 +265,7 @@ export default function EditRound() {
         </section>
 
         {/* % HANDICAP — modos simples */}
-        {['stroke', 'matchplay_individual', 'matchplay_dobles', 'bismarck'].includes(mode) && (
+        {['stroke', 'matchplay_individual', 'matchplay_dobles', 'bismarck', 'mejor_peor_suma'].includes(mode) && (
           <section style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
             <h2 style={{ fontFamily: 'var(--display)', fontSize: 14, letterSpacing: 2, color: 'var(--text3)', marginBottom: 14 }}>% HANDICAP</h2>
             <HcpPctSelector value={hcpPct} onChange={setHcpPct} />

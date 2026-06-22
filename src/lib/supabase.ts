@@ -19,7 +19,7 @@ export const supabase = new Proxy({} as SupabaseClient, {
   }
 })
 
-export type GameMode = 'stroke' | 'matchplay_individual' | 'matchplay_dobles' | 'bismarck' | 'combinado_4' | 'combinado_bismarck'
+export type GameMode = 'stroke' | 'matchplay_individual' | 'matchplay_dobles' | 'bismarck' | 'combinado_4' | 'combinado_bismarck' | 'mejor_peor_suma'
 
 export interface Course {
   id: string

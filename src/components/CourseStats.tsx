@@ -24,11 +24,13 @@ export default function CourseStats({ courseId, currentRoundId }: { courseId: st
   const [holesMeta, setHolesMeta] = useState<{ hole: number; par: number; ventaja: number }[]>([])
   const [holesCount, setHolesCount] = useState(18)
   const [range, setRange] = useState<Range>('all')
+  const [courseName, setCourseName] = useState('')
   const hasDay = !!currentRoundId
 
   useEffect(() => {
     async function load() {
-      const { data: cd } = await supabase.from('courses').select('holes_count, holes(*)').eq('id', courseId).single()
+      const { data: cd } = await supabase.from('courses').select('name, holes_count, holes(*)').eq('id', courseId).single()
+      setCourseName((cd as any)?.name || '')
       const cHoles = [...(((cd as any)?.holes) || [])].sort((a: any, b: any) => a.hole_number - b.hole_number)
       const hc = (cd as any)?.holes_count || cHoles.length || 18
       const vent: Record<number, number> = {}, par: Record<number, number> = {}
@@ -124,7 +126,7 @@ export default function CourseStats({ courseId, currentRoundId }: { courseId: st
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 8, gap: 8, flexWrap: 'wrap' }}>
-        <h3 style={{ fontFamily: 'var(--display)', fontSize: 14, letterSpacing: 2, color: 'var(--text2)' }}>VENTAJA vs DIFICULTAD REAL</h3>
+        <h3 style={{ fontFamily: 'var(--display)', fontSize: 14, letterSpacing: 2, color: 'var(--text2)' }}>VENTAJA vs DIFICULTAD REAL{courseName ? ` · ${courseName.toUpperCase()}` : ''}</h3>
         <span style={{ fontSize: 12, color: 'var(--text3)' }}>{roundsCount} {roundsCount === 1 ? 'vuelta' : 'vueltas'} · 100% HDCP</span>
       </div>
 
@@ -191,8 +193,15 @@ export default function CourseStats({ courseId, currentRoundId }: { courseId: st
           <line x1={pad} y1={scH - pad} x2={scW - pad} y2={pad} stroke="var(--border2)" strokeDasharray="4 4" />
           <line x1={pad} y1={pad} x2={pad} y2={scH - pad} stroke="var(--border)" />
           <line x1={pad} y1={scH - pad} x2={scW - pad} y2={scH - pad} stroke="var(--border)" />
-          <text x={scW / 2} y={scH - 4} fill="var(--text3)" fontSize="9" textAnchor="middle">Stroke Index actual</text>
-          <text x={8} y={pad - 8} fill="var(--text3)" fontSize="9">Dif. real</text>
+          {/* Eje X: stroke index actual (1 difícil → N fácil) */}
+          <text x={pad} y={scH - pad + 11} fill="var(--text3)" fontSize="8" textAnchor="middle">1</text>
+          <text x={(pad + scW - pad) / 2} y={scH - pad + 11} fill="var(--text3)" fontSize="8" textAnchor="middle">{Math.ceil(N / 2)}</text>
+          <text x={scW - pad} y={scH - pad + 11} fill="var(--text3)" fontSize="8" textAnchor="middle">{N}</text>
+          <text x={scW / 2} y={scH - 3} fill="var(--text2)" fontSize="9" textAnchor="middle">Stroke Index actual  (1 difícil → {N} fácil)</text>
+          {/* Eje Y: dificultad real (1 difícil abajo → N fácil arriba) */}
+          <text x={pad - 5} y={scH - pad + 3} fill="var(--text3)" fontSize="8" textAnchor="end">1</text>
+          <text x={pad - 5} y={pad + 3} fill="var(--text3)" fontSize="8" textAnchor="end">{N}</text>
+          <text x={6} y={pad - 9} fill="var(--text2)" fontSize="9">Dif. real  (↓1 difícil · ↑{N} fácil)</text>
           {holesMeta.map(h => {
             const rr = stats.realRank[h.hole]; if (!rr) return null
             const off = Math.abs(h.ventaja - (stats.sug[h.hole] || rr))
@@ -205,7 +214,9 @@ export default function CourseStats({ courseId, currentRoundId }: { courseId: st
           })}
         </svg>
       </div>
-      <p style={{ fontSize: 11, color: 'var(--text3)', marginTop: 6 }}>Cada punto es un hoyo. Sobre la diagonal = ventaja bien asignada; lejos = mal clasificado.</p>
+      <p style={{ fontSize: 11, color: 'var(--text3)', marginTop: 6, lineHeight: 1.6 }}>
+        <strong>Cómo leerlo:</strong> cada punto es un hoyo. El eje X es el índice de ventaja que asigna la tarjeta (1 = el más difícil, {N} = el más fácil); el eje Y es la dificultad real según el gross promedio sobre par (abajo = jugó más difícil, arriba = más fácil). La diagonal es el caso ideal (índice asignado = dificultad real). Un punto <strong>encima</strong> de la diagonal jugó más fácil que su índice (índice demasiado bajo); <strong>debajo</strong>, jugó más difícil que su índice (índice demasiado alto). El <strong>color</strong> mide la distancia entre la ventaja actual y la sugerida (<span style={{ color: '#34d399' }}>verde</span> ok, <span style={{ color: '#fbbf24' }}>amarillo</span> revisar, <span style={{ color: '#f87171' }}>rojo</span> mal).
+      </p>
 
       {/* Gráfico 2: discriminación por hoyo */}
       <h4 style={{ fontFamily: 'var(--display)', fontSize: 13, letterSpacing: 1, color: 'var(--text2)', marginTop: 22, marginBottom: 8 }}>DISCRIMINACIÓN POR HOYO</h4>
@@ -225,7 +236,7 @@ export default function CourseStats({ courseId, currentRoundId }: { courseId: st
         </div>
       )}
       <p style={{ fontSize: 11, color: 'var(--text3)', marginTop: 8, lineHeight: 1.6 }}>
-        Diferencia de gross promedio entre HCP altos (&gt;12) y bajos (≤12). Más alto = el hoyo separa más a buenos de menos buenos, lo que justifica una ventaja baja. Se calcula con todos los jugadores, sin importar el selector.
+        <strong>Cómo leerlo:</strong> cada barra es la diferencia de gross promedio entre HCP altos (&gt;12) y bajos (≤12) en ese hoyo. <span style={{ color: '#2dd4bf' }}>Verde (positiva)</span> = los malos sacan bastante más que los buenos, el hoyo <em>separa</em> niveles y justifica una <strong>ventaja baja</strong> (índice difícil). <span style={{ color: '#f87171' }}>Roja (negativa)</span> = no discrimina, justifica un índice alto. Se calcula con todos los jugadores del campo, sin importar el selector de HDCP.
       </p>
     </div>
   )

@@ -8,7 +8,7 @@ import TopBar from '@/components/TopBar'
 import CourseStats from '@/components/CourseStats'
 import {
   calcStroke, calcMatchPlay, calcMatchPlayDobles, calcBismarck,
-  calcCombinado4, calcCombinadoBismarck, getExtraStrokes, getRelativeExtra,
+  calcCombinado4, calcCombinadoBismarck, calcMejorPeorSuma, getExtraStrokes, getRelativeExtra,
   correctCombinedHandicaps, buildLoopRoundHoles
 } from '@/lib/golf'
 
@@ -223,6 +223,8 @@ export default function RoundPage() {
     ? calcMatchPlay(players[0], players[1], scores, holes, holes.length, hcpPct) : null
   const doublesResult = r.mode === 'matchplay_dobles' && players.length === 4
     ? calcMatchPlayDobles(players, scores, holes, holes.length, hcpPct) : null
+  const mpsResult = r.mode === 'mejor_peor_suma' && players.length === 4
+    ? calcMejorPeorSuma(players, scores, holes, holes.length, hcpPct) : null
   const bismarckResult = r.mode === 'bismarck' && players.length === 3
     ? calcBismarck(players, scores, holes, holes.length, hcpPct) : null
   const combinado4Result = r.mode === 'combinado_4' && players.length === 4
@@ -1114,6 +1116,87 @@ export default function RoundPage() {
                     )
                   })}
                 </div>
+              </div>
+              )
+            })()}
+
+            {/* MEJOR, PEOR Y SUMA */}
+            {r.mode === 'mejor_peor_suma' && mpsResult && (() => {
+              const t1p = players.filter(p => p.team === 1)
+              const t2p = players.filter(p => p.team === 2)
+              const ordered = [...t1p, ...t2p]
+              const teamCol = (t: number | undefined) => PLAYER_COLORS[t === 1 ? 0 : 2]
+              const m = mpsResult.margin
+              const signed = (v: number) => (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v)
+              const cat = (w: 0 | 1 | 2, val: number) => w === 0
+                ? <span style={{ color: 'var(--text3)' }}>=</span>
+                : <span style={{ fontWeight: 700, color: teamCol(w) }}>{val}</span>
+              const cellTd: React.CSSProperties = { padding: '5px 6px', borderBottom: '1px solid var(--border)', textAlign: 'center', whiteSpace: 'nowrap' }
+              const headTh: React.CSSProperties = { padding: '7px 6px', textAlign: 'center', fontSize: 10, color: 'var(--text3)', background: 'var(--surface2)', whiteSpace: 'nowrap', lineHeight: 1.2 }
+              return (
+              <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
+                <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontFamily: 'var(--display)', fontSize: 14, letterSpacing: 2, color: 'var(--text3)', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+                  <span>MEJOR, PEOR Y SUMA</span>
+                  <span style={{ fontSize: 11 }}>NETO · HCP {hcpPct}%</span>
+                </div>
+                {/* Marcador */}
+                <div style={{ display: 'flex', alignItems: 'center', padding: 16, gap: 8 }}>
+                  <div style={{ flex: 1, textAlign: 'center' }}>
+                    <div style={{ fontSize: 11, color: teamCol(1), fontWeight: 700, letterSpacing: 1 }}>EQUIPO 1</div>
+                    <div style={{ fontFamily: 'var(--display)', fontSize: 34, color: teamCol(1) }}>{mpsResult.totalT1}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text3)' }}>{t1p.map(p => p.name).join(' y ')}</div>
+                  </div>
+                  <div style={{ textAlign: 'center', minWidth: 78 }}>
+                    <div style={{ fontSize: 10, color: 'var(--text3)', letterSpacing: 1 }}>MARGEN</div>
+                    <div style={{ fontFamily: 'var(--display)', fontSize: 24, color: m > 0 ? teamCol(1) : m < 0 ? teamCol(2) : 'var(--text2)' }}>{m === 0 ? 'EQ' : signed(m)}</div>
+                    <div style={{ fontSize: 10, color: 'var(--text3)' }}>{m > 0 ? 'Equipo 1' : m < 0 ? 'Equipo 2' : 'Empate'}</div>
+                  </div>
+                  <div style={{ flex: 1, textAlign: 'center' }}>
+                    <div style={{ fontSize: 11, color: teamCol(2), fontWeight: 700, letterSpacing: 1 }}>EQUIPO 2</div>
+                    <div style={{ fontFamily: 'var(--display)', fontSize: 34, color: teamCol(2) }}>{mpsResult.totalT2}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text3)' }}>{t2p.map(p => p.name).join(' y ')}</div>
+                  </div>
+                </div>
+                {/* Desglose por hoyo */}
+                {mpsResult.holeResults.length === 0 ? (
+                  <div style={{ padding: '0 16px 16px', fontSize: 12, color: 'var(--text3)' }}>Aún no hay hoyos completados por las 4 personas.</div>
+                ) : (
+                  <div style={{ overflowX: 'auto', borderTop: '1px solid var(--border)' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                      <thead>
+                        <tr>
+                          <th style={headTh}>H</th>
+                          {ordered.map(p => <th key={p.id} style={{ ...headTh, color: teamCol(p.team) }}>{p.name}</th>)}
+                          <th style={headTh}>Mejor<br />(2)</th>
+                          <th style={headTh}>Suma<br />(1)</th>
+                          <th style={headTh}>Peor<br />(1)</th>
+                          <th style={headTh}>Hoyo</th>
+                          <th style={headTh}>Acum</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {mpsResult.holeResults.map(h => {
+                          const net = (pid: string) => h.nets.find(n => n.playerId === pid)?.net
+                          const hp = h.pts1 - h.pts2
+                          return (
+                            <tr key={h.hole}>
+                              <td style={{ ...cellTd, color: 'var(--text3)', fontWeight: 700 }}>{h.hole}</td>
+                              {ordered.map(p => <td key={p.id} style={{ ...cellTd, color: teamCol(p.team), fontWeight: 600 }}>{net(p.id) ?? '—'}</td>)}
+                              <td style={cellTd}>{cat(h.winners.mejor, 2)}</td>
+                              <td style={cellTd}>{cat(h.winners.suma, 1)}</td>
+                              <td style={cellTd}>{cat(h.winners.peor, 1)}</td>
+                              <td style={{ ...cellTd, fontWeight: 700, color: hp > 0 ? teamCol(1) : hp < 0 ? teamCol(2) : 'var(--text3)' }}>{hp === 0 ? '0' : signed(hp)}</td>
+                              <td style={{ ...cellTd, fontFamily: 'var(--display)', fontSize: 13, color: h.margin > 0 ? teamCol(1) : h.margin < 0 ? teamCol(2) : 'var(--text2)' }}>{h.margin === 0 ? '0' : signed(h.margin)}</td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                <p style={{ fontSize: 11, color: 'var(--text3)', padding: '10px 16px', lineHeight: 1.6, margin: 0 }}>
+                  Cada hoyo (neto, menor gana): <strong>Mejor</strong> bola = 2 pts · <strong>Suma</strong> de la pareja = 1 pt · <strong>Peor</strong> bola = 1 pt. Empate en una categoría = 0. <strong>Hoyo</strong> = saldo del hoyo y <strong>Acum</strong> = saldo acumulado, a favor del Equipo 1 (− si va arriba el Equipo 2).
+                </p>
               </div>
               )
             })()}
