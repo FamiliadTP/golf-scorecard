@@ -5,6 +5,7 @@ import Link from 'next/link'
 const LINKS = [
   { href: '/', label: 'Inicio', icon: '🏠' },
   { href: '/round/new', label: 'Nueva partida', icon: '⛳' },
+  { href: '/leaderboard', label: 'Leaderboard', icon: '🏆' },
   { href: '/course/new', label: 'Nuevo campo', icon: '＋' },
   { href: '/course', label: 'Mis campos', icon: '🏌️' },
   { href: '/archive', label: 'Partidas anteriores', icon: '📁' },

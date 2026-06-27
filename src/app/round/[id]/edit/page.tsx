@@ -119,7 +119,7 @@ export default function EditRound() {
     if (!isValid() || saving) return
     setSaving(true)
     const update: any = { course_id: courseId, holes_played: holesPlayed, date }
-    if (['stroke', 'matchplay_individual', 'matchplay_dobles', 'bismarck', 'mejor_peor_suma'].includes(mode)) {
+    if (['stroke', 'matchplay_individual', 'matchplay_dobles', 'bismarck', 'mejor_peor_suma', 'stroke_grupal'].includes(mode)) {
       update.hcp_pct = hcpPct
     }
     if (mode === 'combinado_4') {
@@ -265,7 +265,7 @@ export default function EditRound() {
         </section>
 
         {/* % HANDICAP — modos simples */}
-        {['stroke', 'matchplay_individual', 'matchplay_dobles', 'bismarck', 'mejor_peor_suma'].includes(mode) && (
+        {['stroke', 'matchplay_individual', 'matchplay_dobles', 'bismarck', 'mejor_peor_suma', 'stroke_grupal'].includes(mode) && (
           <section style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
             <h2 style={{ fontFamily: 'var(--display)', fontSize: 14, letterSpacing: 2, color: 'var(--text3)', marginBottom: 14 }}>% HANDICAP</h2>
             <HcpPctSelector value={hcpPct} onChange={setHcpPct} />

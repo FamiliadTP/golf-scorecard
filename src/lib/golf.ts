@@ -433,3 +433,101 @@ export function calcCombinadoBismarck(
 
   return { bismarck, individuales }
 }
+
+// ─── Stroke Play Grupal ───────────────────────────────────────────────
+// Modalidad principal: todos contra todos en stroke play (gross y neto), con
+// leaderboard común. Opcionalmente corren partidos match play paralelos dentro
+// del cuarto/trío (side game) que NO afectan el leaderboard.
+
+export interface GrupalSideResult {
+  dobles: DoublesResult | null
+  singles: { p1: RoundPlayer; p2: RoundPlayer; match: MatchPlayResult }[]
+}
+
+export function calcGrupalSide(
+  players: RoundPlayer[], scores: Score[], holes: Hole[], totalHoles: number,
+  sideMatch: 'none' | 'dobles' | 'singles', pct: number = 100
+): GrupalSideResult {
+  if (sideMatch === 'dobles' && players.length === 4) {
+    return { dobles: calcMatchPlayDobles(players, scores, holes, totalHoles, pct), singles: [] }
+  }
+  if (sideMatch === 'singles') {
+    const singles: GrupalSideResult['singles'] = []
+    for (let i = 0; i < players.length; i++) {
+      for (let j = i + 1; j < players.length; j++) {
+        singles.push({
+          p1: players[i], p2: players[j],
+          match: calcMatchPlay(players[i], players[j], scores, holes, totalHoles, pct),
+        })
+      }
+    }
+    return { dobles: null, singles }
+  }
+  return { dobles: null, singles: [] }
+}
+
+// ─── Count-back (desempate por últimos 9/6/3/1) ──────────────────────
+// Devuelve los totales de los segmentos finales; menor es mejor. net=true
+// resta la ventaja individual del jugador.
+export function countbackSegments(
+  player: RoundPlayer, scores: Score[], holes: Hole[], totalHoles: number,
+  net: boolean, pct: number = 100
+): number[] {
+  const sorted = [...holes].sort((a, b) => a.hole_number - b.hole_number)
+  const sizes = [9, 6, 3, 1].filter(n => n <= sorted.length)
+  return sizes.map(n => {
+    const seg = sorted.slice(sorted.length - n)
+    return seg.reduce((sum, h) => {
+      const s = scores.find(sc => sc.player_id === player.id && sc.hole_number === h.hole_number)
+      if (!s?.strokes) return sum
+      const extra = net ? getExtraStrokes(h.handicap, player.handicap, totalHoles, pct) : 0
+      return sum + (s.strokes - extra)
+    }, 0)
+  })
+}
+
+export function compareCountback(a: number[], b: number[]): number {
+  for (let i = 0; i < Math.min(a.length, b.length); i++) {
+    if (a[i] !== b[i]) return a[i] - b[i]
+  }
+  return 0
+}
+
+// ─── Leaderboard (ranking gross/neto entre varios cuartos/tríos) ─────
+export interface LeaderboardEntry {
+  playerId: string
+  name: string
+  handicap: number
+  roundId: string
+  gross: number
+  net: number
+  parPlayed: number
+  thru: number
+  cbGross: number[]
+  cbNet: number[]
+}
+
+export function buildLeaderboardEntries(
+  roundId: string, players: RoundPlayer[], scores: Score[], holes: Hole[], pct: number = 100
+): LeaderboardEntry[] {
+  const totalHoles = holes.length
+  return players.map(p => {
+    let gross = 0, net = 0, par = 0, thru = 0
+    holes.forEach(h => {
+      const s = scores.find(sc => sc.player_id === p.id && sc.hole_number === h.hole_number)
+      if (s?.strokes) {
+        const extra = getExtraStrokes(h.handicap, p.handicap, totalHoles, pct)
+        gross += s.strokes
+        net += s.strokes - extra
+        par += h.par
+        thru++
+      }
+    })
+    return {
+      playerId: p.id, name: p.name, handicap: p.handicap, roundId,
+      gross, net, parPlayed: par, thru,
+      cbGross: countbackSegments(p, scores, holes, totalHoles, false, pct),
+      cbNet: countbackSegments(p, scores, holes, totalHoles, true, pct),
+    }
+  })
+}

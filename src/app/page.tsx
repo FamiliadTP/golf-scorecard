@@ -15,7 +15,9 @@ const MODE_LABELS: Record<string, string> = {
   matchplay_dobles: 'Match Play Dobles',
   bismarck: 'Bismarck',
   combinado_4: 'Ryder',
-  combinado_bismarck: 'Bismarck + Individuales'
+  combinado_bismarck: 'Bismarck + Individuales',
+  mejor_peor_suma: 'Mejor, Peor y Suma',
+  stroke_grupal: 'Stroke Play Grupal'
 }
 const MODE_COLORS: Record<string, string> = {
   stroke: '#2dd4bf',
@@ -23,7 +25,9 @@ const MODE_COLORS: Record<string, string> = {
   matchplay_dobles: '#a78bfa',
   bismarck: '#f87171',
   combinado_4: '#34d399',
-  combinado_bismarck: '#fb923c'
+  combinado_bismarck: '#fb923c',
+  mejor_peor_suma: '#22d3ee',
+  stroke_grupal: '#38bdf8'
 }
 
 export default function Home() {

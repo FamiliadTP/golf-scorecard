@@ -9,6 +9,7 @@ import { supabase, Course, GameMode, Player } from '@/lib/supabase'
 const MODES: { value: GameMode; label: string; desc: string; color: string; players: string }[] = [
   { value: 'combinado_4', label: 'Ryder', desc: 'Dobles + 4 individuales cruzados', color: '#34d399', players: '4 jugadores' },
   { value: 'stroke', label: 'Stroke Play', desc: 'Stableford con handicap', color: '#2dd4bf', players: '1–4 jugadores' },
+  { value: 'stroke_grupal', label: 'Stroke Play Grupal', desc: 'Todos contra todos + leaderboard en línea', color: '#38bdf8', players: '3–4 jugadores' },
   { value: 'matchplay_individual', label: 'Match Play', desc: 'Individual hoyo a hoyo', color: '#f59e0b', players: '2 jugadores' },
   { value: 'matchplay_dobles', label: 'Match Play Dobles', desc: 'Mejor bola 2 vs 2', color: '#a78bfa', players: '4 jugadores' },
   { value: 'mejor_peor_suma', label: 'Mejor, Peor y Suma', desc: 'Parejas: best ball (2) + suma (1) + worst ball (1) por hoyo', color: '#22d3ee', players: '4 jugadores' },
@@ -80,6 +81,11 @@ export default function NewRound() {
   const [individualMode, setIndividualMode] = useState<'stroke' | 'matchplay'>('matchplay')
   const [individualHcpPct, setIndividualHcpPct] = useState(100)
   const [bismarckHcpPct, setBismarckHcpPct] = useState(100)
+  const [grupal, setGrupal] = useState(false)
+  const [competitionName, setCompetitionName] = useState('')
+  const [lockedName, setLockedName] = useState(false)
+  const [sideMatch, setSideMatch] = useState<'none' | 'dobles' | 'singles'>('none')
+  const [sideHcpPct, setSideHcpPct] = useState(100)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -90,6 +96,8 @@ export default function NewRound() {
   }, [])
 
   const isStroke = mode === 'stroke'
+  const isStrokeLike = mode === 'stroke' || mode === 'stroke_grupal'
+  const needsTeams = mode === 'combinado_4' || mode === 'matchplay_dobles' || mode === 'mejor_peor_suma' || (mode === 'stroke_grupal' && sideMatch === 'dobles')
 
   const selectedCourse: any = courses.find(c => c.id === courseId)
   const isNineType = selectedCourse?.holes_count === 9
@@ -120,7 +128,8 @@ export default function NewRound() {
   // Fixed player counts per mode
   const fixedCount: Record<GameMode, number | null> = {
     stroke: null, matchplay_individual: 2, matchplay_dobles: 4,
-    bismarck: 3, combinado_4: 4, combinado_bismarck: 3, mejor_peor_suma: 4
+    bismarck: 3, combinado_4: 4, combinado_bismarck: 3, mejor_peor_suma: 4,
+    stroke_grupal: null
   }
 
   useEffect(() => {
@@ -137,26 +146,64 @@ export default function NewRound() {
     }
   }, [mode])
 
+  // Stroke Grupal: mínimo 3 jugadores; si el side game es Dobles, forzar 4 y equipos 2/2.
+  useEffect(() => {
+    if (mode !== 'stroke_grupal') return
+    setPlayers(prev => {
+      let base = [...prev]
+      const min = sideMatch === 'dobles' ? 4 : 3
+      while (base.length < min) base.push({ name: '', handicap: 18, team: base.length < 2 ? 1 : 2 })
+      if (sideMatch === 'dobles') base = base.slice(0, 4).map((p, i) => ({ ...p, team: i < 2 ? 1 : 2 }))
+      return base
+    })
+  }, [mode, sideMatch])
+
+  // Stroke Grupal + Grupal=Sí: hereda el nombre de competencia del primer grupal
+  // del día en la misma cancha (merge automático por cancha + fecha + modalidad).
+  useEffect(() => {
+    if (mode !== 'stroke_grupal' || !grupal || !courseId || !date) { setLockedName(false); return }
+    let cancel = false
+    supabase.from('rounds')
+      .select('competition_name')
+      .eq('mode', 'stroke_grupal').eq('grupal', true)
+      .eq('course_id', courseId).eq('date', date)
+      .not('competition_name', 'is', null)
+      .order('created_at', { ascending: true }).limit(1)
+      .then(({ data }) => {
+        if (cancel) return
+        const found = data && data.length ? (data[0] as any).competition_name : null
+        if (found) { setCompetitionName(found); setLockedName(true) }
+        else setLockedName(false)
+      })
+    return () => { cancel = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, grupal, courseId, date])
+
   const updatePlayer = (i: number, field: string, val: any) =>
     setPlayers(prev => prev.map((p, idx) => idx === i ? { ...p, [field]: val } : p))
 
   const addPlayer = () => {
     if (players.length >= 4) return
-    setPlayers(prev => [...prev, { name: '', handicap: 18, team: 1 }])
+    setPlayers(prev => [...prev, { name: '', handicap: 18, team: prev.length < 2 ? 1 : 2 }])
   }
 
+  const minPlayers = mode === 'stroke_grupal' ? (sideMatch === 'dobles' ? 4 : 3) : 1
   const removePlayer = (i: number) => {
-    if (players.length <= 1) return
+    if (players.length <= minPlayers) return
     setPlayers(prev => prev.filter((_, idx) => idx !== i))
   }
 
-  const teamBalanced = !(mode === 'combinado_4' || mode === 'matchplay_dobles' || mode === 'mejor_peor_suma') ||
+  const teamBalanced = !needsTeams ||
     (players.filter(p => p.team === 1).length === 2 && players.filter(p => p.team === 2).length === 2)
 
   const isValid = () => {
     if (!courseId) return false
     if (playTwoLoops && !secondCourseId) return false
     if (!teamBalanced) return false
+    if (mode === 'stroke_grupal') {
+      if (players.length < (sideMatch === 'dobles' ? 4 : 3)) return false
+      if (grupal && !competitionName.trim()) return false
+    }
     const needed = fixedCount[mode]
     if (needed !== null && players.length !== needed) return false
     return players.every(p => p.name.trim())
@@ -166,7 +213,13 @@ export default function NewRound() {
     if (!isValid() || saving) return
     setSaving(true)
     const roundData: any = { course_id: courseId, second_course_id: playTwoLoops ? secondCourseId : null, mode, holes_played: holesPlayed, date }
-    if (['stroke', 'matchplay_individual', 'matchplay_dobles', 'bismarck', 'mejor_peor_suma'].includes(mode)) roundData.hcp_pct = hcpPct
+    if (['stroke', 'matchplay_individual', 'matchplay_dobles', 'bismarck', 'mejor_peor_suma', 'stroke_grupal'].includes(mode)) roundData.hcp_pct = hcpPct
+    if (mode === 'stroke_grupal') {
+      roundData.grupal = grupal
+      roundData.competition_name = grupal ? competitionName.trim() : null
+      roundData.side_match = sideMatch
+      roundData.side_hcp_pct = sideHcpPct
+    }
     if (mode === 'combinado_4') {
       roundData.dobles_mode = doblesMode; roundData.dobles_hcp_pct = doblesHcpPct
       roundData.individual_mode = individualMode; roundData.individual_hcp_pct = individualHcpPct
@@ -290,7 +343,7 @@ export default function NewRound() {
         <section style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
             <h2 style={{ fontFamily: 'var(--display)', fontSize: 14, letterSpacing: 2, color: 'var(--text3)' }}>JUGADORES</h2>
-            {isStroke && players.length < 4 && (
+            {isStrokeLike && players.length < 4 && (
               <button onClick={addPlayer} style={{
                 background: 'transparent', border: '1px solid var(--border2)',
                 borderRadius: 6, color: 'var(--text2)', padding: '5px 12px', fontSize: 13, cursor: 'pointer'
@@ -298,7 +351,7 @@ export default function NewRound() {
             )}
           </div>
 
-          {(mode === 'combinado_4' || mode === 'matchplay_dobles' || mode === 'mejor_peor_suma') && (
+          {needsTeams && (
             <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
               {[1, 2].map(t => (
                 <div key={t} style={{ flex: 1, padding: '8px 12px', borderRadius: 8, background: `${PLAYER_COLORS[t === 1 ? 0 : 2]}10`, border: `1px solid ${PLAYER_COLORS[t === 1 ? 0 : 2]}30`, fontSize: 12, color: PLAYER_COLORS[t === 1 ? 0 : 2] }}>
@@ -308,7 +361,7 @@ export default function NewRound() {
             </div>
           )}
 
-          {(mode === 'combinado_4' || mode === 'matchplay_dobles' || mode === 'mejor_peor_suma') && !teamBalanced && (
+          {needsTeams && !teamBalanced && (
             <div style={{ marginBottom: 14, padding: '8px 12px', borderRadius: 8, background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.25)', fontSize: 12, color: '#f87171' }}>
               Cada equipo debe tener 2 jugadores. Usa los botones T1 / T2 para asignarlos.
             </div>
@@ -316,7 +369,7 @@ export default function NewRound() {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {players.map((p, i) => {
-              const isDoubles = mode === 'combinado_4' || mode === 'matchplay_dobles' || mode === 'mejor_peor_suma'
+              const isDoubles = needsTeams
               const teamColor = (t: number) => PLAYER_COLORS[t === 1 ? 0 : 2]
               const teamBg = (t: number) => PLAYER_BG[t === 1 ? 0 : 2]
               return (
@@ -342,7 +395,7 @@ export default function NewRound() {
                     ))}
                   </div>
                 )}
-                {isStroke && players.length > 1 && (
+                {isStrokeLike && players.length > minPlayers && (
                   <button onClick={() => removePlayer(i)} style={{
                     background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.2)',
                     color: '#f87171', borderRadius: 6, padding: '7px 10px',
@@ -367,7 +420,7 @@ export default function NewRound() {
                 <span style={{ flex: 1, fontSize: 14, color: p.name ? PLAYER_COLORS[i] : 'var(--text3)', fontWeight: p.name ? 600 : 400 }}>
                   {p.name || `Jugador ${i + 1}`}
                 </span>
-                {(mode === 'combinado_4' || mode === 'matchplay_dobles' || mode === 'mejor_peor_suma') && (
+                {needsTeams && (
                   <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 6, marginRight: 4, color: '#071209', background: PLAYER_COLORS[p.team === 1 ? 0 : 2] }}>
                     T{p.team}
                   </span>
@@ -388,10 +441,88 @@ export default function NewRound() {
         {/* 5. % HANDICAP */}
 
         {/* Modalidades simples */}
-        {['stroke', 'matchplay_individual', 'matchplay_dobles', 'bismarck', 'mejor_peor_suma'].includes(mode) && (
+        {['stroke', 'matchplay_individual', 'matchplay_dobles', 'bismarck', 'mejor_peor_suma', 'stroke_grupal'].includes(mode) && (
           <section style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
             <h2 style={{ fontFamily: 'var(--display)', fontSize: 14, letterSpacing: 2, color: 'var(--text3)', marginBottom: 14 }}>% HANDICAP</h2>
             <HcpPctSelector value={hcpPct} onChange={setHcpPct} />
+          </section>
+        )}
+
+        {/* Config Stroke Grupal */}
+        {mode === 'stroke_grupal' && (
+          <section style={{ background: 'var(--surface)', border: '1px solid #38bdf830', borderRadius: 12, padding: 20 }}>
+            <h2 style={{ fontFamily: 'var(--display)', fontSize: 14, letterSpacing: 2, color: '#38bdf8', marginBottom: 16 }}>COMPETENCIA GRUPAL</h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+              {/* Switch Grupal Sí/No */}
+              <div>
+                <div style={{ fontSize: 11, color: 'var(--text3)', letterSpacing: 1, marginBottom: 6 }}>¿GRUPAL?</div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {[{ v: true, l: 'Sí' }, { v: false, l: 'No' }].map(o => (
+                    <button key={o.l} onClick={() => setGrupal(o.v)} style={{
+                      padding: '8px 22px', borderRadius: 8, border: '1px solid var(--border)',
+                      background: grupal === o.v ? '#38bdf8' : 'transparent',
+                      color: grupal === o.v ? '#04121a' : 'var(--text3)',
+                      fontWeight: 600, fontSize: 14, cursor: 'pointer'
+                    }}>{o.l}</button>
+                  ))}
+                </div>
+                <p style={{ fontSize: 12, color: 'var(--text3)', marginTop: 6, lineHeight: 1.4 }}>
+                  Si es Grupal, todos los cuartos/tríos de la misma cancha, fecha y modalidad
+                  entran al mismo leaderboard automáticamente.
+                </p>
+              </div>
+
+              {/* Nombre de la competencia */}
+              {grupal && (
+                <div>
+                  <div style={{ fontSize: 11, color: 'var(--text3)', letterSpacing: 1, marginBottom: 6 }}>NOMBRE DE LA COMPETENCIA</div>
+                  <input
+                    value={competitionName}
+                    onChange={e => setCompetitionName(e.target.value)}
+                    placeholder="Ej: Copa Las Brisas"
+                    disabled={lockedName}
+                    style={{ ...inp, opacity: lockedName ? 0.7 : 1 }}
+                  />
+                  <p style={{ fontSize: 12, color: lockedName ? '#38bdf8' : 'var(--text3)', marginTop: 6, lineHeight: 1.4 }}>
+                    {lockedName
+                      ? 'Ya existe una competencia grupal este día en esta cancha. Se hereda su nombre.'
+                      : 'Este es el primer grupal del día en esta cancha; los siguientes heredarán este nombre.'}
+                  </p>
+                </div>
+              )}
+
+              {/* Partidos paralelos (side game) */}
+              <div style={{ padding: 14, background: 'rgba(245,158,11,0.05)', borderRadius: 10, border: '1px solid #f59e0b20' }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#f59e0b', marginBottom: 10 }}>
+                  Partidos paralelos (opcional, solo dentro del cuarto/trío)
+                </div>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
+                  {[
+                    { v: 'none' as const, l: 'Ninguno', show: true },
+                    { v: 'dobles' as const, l: 'Dobles (2v2)', show: players.length === 4 || sideMatch === 'dobles' },
+                    { v: 'singles' as const, l: 'Singles — todos contra todos', show: true },
+                  ].filter(o => o.show).map(o => (
+                    <button key={o.v} onClick={() => setSideMatch(o.v)} style={{
+                      padding: '7px 14px', borderRadius: 8, border: '1px solid var(--border)',
+                      background: sideMatch === o.v ? '#f59e0b' : 'transparent',
+                      color: sideMatch === o.v ? '#1a1000' : 'var(--text3)',
+                      fontWeight: sideMatch === o.v ? 700 : 400, fontSize: 13, cursor: 'pointer'
+                    }}>{o.l}</button>
+                  ))}
+                </div>
+                {sideMatch !== 'none' && (
+                  <div>
+                    <div style={{ fontSize: 11, color: 'var(--text3)', letterSpacing: 1, marginBottom: 6 }}>% HANDICAP PARTIDOS</div>
+                    <HcpPctSelector value={sideHcpPct} onChange={setSideHcpPct} />
+                  </div>
+                )}
+                <p style={{ fontSize: 12, color: 'var(--text3)', marginTop: 8, lineHeight: 1.4 }}>
+                  Los partidos paralelos corren en match play y no afectan el leaderboard de stroke play.
+                  {sideMatch === 'dobles' && ' Dobles requiere 4 jugadores y equipos 2/2.'}
+                </p>
+              </div>
+            </div>
           </section>
         )}
 

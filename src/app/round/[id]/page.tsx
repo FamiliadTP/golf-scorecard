@@ -8,7 +8,7 @@ import TopBar from '@/components/TopBar'
 import CourseStats from '@/components/CourseStats'
 import {
   calcStroke, calcMatchPlay, calcMatchPlayDobles, calcBismarck,
-  calcCombinado4, calcCombinadoBismarck, calcMejorPeorSuma, getExtraStrokes, getRelativeExtra,
+  calcCombinado4, calcCombinadoBismarck, calcMejorPeorSuma, calcGrupalSide, getExtraStrokes, getRelativeExtra,
   correctCombinedHandicaps, buildLoopRoundHoles
 } from '@/lib/golf'
 
@@ -18,11 +18,12 @@ const PLAYER_BG = ['#0d9488', '#d97706', '#7c3aed', '#dc2626']
 const MODE_LABELS: Record<string, string> = {
   stroke: 'Stroke Play', matchplay_individual: 'Match Play',
   matchplay_dobles: 'Dobles', bismarck: 'Bismarck',
-  combinado_4: 'Ryder', combinado_bismarck: 'Bismarck + Individuales'
+  combinado_4: 'Ryder', combinado_bismarck: 'Bismarck + Individuales',
+  mejor_peor_suma: 'Mejor, Peor y Suma', stroke_grupal: 'Stroke Play Grupal'
 }
 
 // Modes that use handicap (show Score Neto tab)
-const MODES_WITH_HCP = ['stroke', 'matchplay_individual', 'matchplay_dobles', 'bismarck', 'combinado_4', 'combinado_bismarck']
+const MODES_WITH_HCP = ['stroke', 'matchplay_individual', 'matchplay_dobles', 'bismarck', 'combinado_4', 'combinado_bismarck', 'stroke_grupal']
 
 function ScoreBadge({ strokes, par }: { strokes: number | null; par: number }) {
   if (!strokes) return <span style={{ color: 'var(--text3)', fontSize: 13 }}>—</span>
@@ -231,6 +232,9 @@ export default function RoundPage() {
     ? calcCombinado4(players, scores, holes, holes.length, (r as any).dobles_mode || 'matchplay', (r as any).dobles_hcp_pct ?? 100, (r as any).individual_mode || 'matchplay', (r as any).individual_hcp_pct ?? 80) : null
   const combinadoBismarckResult = r.mode === 'combinado_bismarck' && players.length === 3
     ? calcCombinadoBismarck(players, scores, holes, holes.length, (r as any).bismarck_hcp_pct ?? 100, (r as any).individual_mode || 'matchplay', (r as any).individual_hcp_pct ?? 80) : null
+  const sideMatch = ((r as any).side_match ?? 'none') as 'none' | 'dobles' | 'singles'
+  const grupalSide = r.mode === 'stroke_grupal' && sideMatch !== 'none'
+    ? calcGrupalSide(players, scores, holes, holes.length, sideMatch, (r as any).side_hcp_pct ?? 100) : null
 
   const front9 = holes.slice(0, 9)
   const back9 = holes.length > 9 ? holes.slice(9) : []
@@ -305,6 +309,14 @@ export default function RoundPage() {
             </div>
             {saving && <div style={{ marginLeft: 'auto', fontSize: 11, color: '#2dd4bf' }}>💾</div>}
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, flexShrink: 0 }}>
+              {r.mode === 'stroke_grupal' && (r as any).grupal && (
+                <Link href={`/leaderboard/${id}`} style={{
+                  background: 'rgba(56,189,248,0.12)',
+                  border: '1px solid rgba(56,189,248,0.3)', color: '#38bdf8',
+                  borderRadius: 8, padding: '6px 12px', fontSize: 12,
+                  textDecoration: 'none'
+                }}>🏆 Leaderboard</Link>
+              )}
               <Link href={`/round/${id}/edit`} style={{
                 background: 'rgba(245,158,11,0.1)',
                 border: '1px solid rgba(245,158,11,0.25)', color: '#f59e0b',
@@ -992,9 +1004,9 @@ export default function RoundPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
             {/* STROKE */}
-            {r.mode === 'stroke' && (
+            {(r.mode === 'stroke' || r.mode === 'stroke_grupal') && (
               <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
-                <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontFamily: 'var(--display)', fontSize: 14, letterSpacing: 2, color: 'var(--text3)' }}>STROKE PLAY — STABLEFORD</div>
+                <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontFamily: 'var(--display)', fontSize: 14, letterSpacing: 2, color: 'var(--text3)' }}>{r.mode === 'stroke_grupal' ? 'STROKE PLAY GRUPAL — STABLEFORD' : 'STROKE PLAY — STABLEFORD'}</div>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr style={{ background: 'var(--surface2)' }}>
@@ -1028,6 +1040,58 @@ export default function RoundPage() {
                   </tbody>
                 </table>
               </div>
+            )}
+
+            {/* STROKE GRUPAL — banner competencia + leaderboard + side game */}
+            {r.mode === 'stroke_grupal' && (
+              <>
+                {(r as any).grupal && (
+                  <div style={{ background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                    <div>
+                      <div style={{ fontSize: 10, color: 'var(--text3)', letterSpacing: 1 }}>COMPETENCIA GRUPAL</div>
+                      <div style={{ fontFamily: 'var(--display)', fontSize: 18, color: '#38bdf8', letterSpacing: 1 }}>{(r as any).competition_name || '—'}</div>
+                    </div>
+                    <Link href={`/leaderboard/${id}`} style={{
+                      background: '#38bdf8', color: '#04121a', borderRadius: 10, padding: '10px 16px',
+                      fontFamily: 'var(--display)', fontSize: 14, letterSpacing: 1, textDecoration: 'none'
+                    }}>🏆 Ver Leaderboard</Link>
+                  </div>
+                )}
+
+                {grupalSide && grupalSide.dobles && (() => {
+                  const d = grupalSide.dobles!
+                  const dRunning = d.holeResults.length ? d.holeResults[d.holeResults.length - 1].runningStatus : 0
+                  const dLeftWon = d.concluded ? d.leadingTeam === 1 : null
+                  return (
+                    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
+                      <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontFamily: 'var(--display)', fontSize: 14, letterSpacing: 2, color: 'var(--text3)' }}>PARTIDO PARALELO — DOBLES (MATCH PLAY)</div>
+                      <div style={{ padding: '16px 16px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                        <div style={{ textAlign: 'center', flex: 1 }}>
+                          <div style={{ fontSize: 12, fontWeight: 600, color: d.leadingTeam === 1 ? PLAYER_COLORS[0] : 'var(--text2)', marginBottom: 4 }}>TEAM 1</div>
+                          {players.filter(p => p.team === 1).map(p => <div key={p.id} style={{ fontSize: 13, color: 'var(--text3)' }}>{p.name}</div>)}
+                        </div>
+                        <RelStatusBadge running={dRunning} concluded={d.concluded} concludedStatus={d.status} leftWon={dLeftWon} label={d.concluded ? '🏆 Terminado' : `${d.holeResults.length} hoyos`} />
+                        <div style={{ textAlign: 'center', flex: 1 }}>
+                          <div style={{ fontSize: 12, fontWeight: 600, color: d.leadingTeam === 2 ? PLAYER_COLORS[2] : 'var(--text2)', marginBottom: 4 }}>TEAM 2</div>
+                          {players.filter(p => p.team === 2).map(p => <div key={p.id} style={{ fontSize: 13, color: 'var(--text3)' }}>{p.name}</div>)}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })()}
+
+                {grupalSide && grupalSide.singles.length > 0 && (
+                  <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
+                    <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontFamily: 'var(--display)', fontSize: 14, letterSpacing: 2, color: 'var(--text3)' }}>PARTIDOS PARALELOS — INDIVIDUALES (MATCH PLAY)</div>
+                    <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {grupalSide.singles.map(({ p1, p2, match }, idx) => (
+                        <IndividualResultCard key={idx} p1={p1} p2={p2} match={match} stroke={null}
+                          pi1={players.findIndex(p => p.id === p1.id)} pi2={players.findIndex(p => p.id === p2.id)} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
             )}
 
             {/* MATCH PLAY INDIVIDUAL */}
