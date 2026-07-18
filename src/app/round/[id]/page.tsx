@@ -12,8 +12,8 @@ import {
   correctCombinedHandicaps, buildLoopRoundHoles
 } from '@/lib/golf'
 
-const PLAYER_COLORS = ['#2dd4bf', '#f59e0b', '#a78bfa', '#f87171']
-const PLAYER_BG = ['#0d9488', '#d97706', '#7c3aed', '#dc2626']
+const PLAYER_COLORS = ['#1B4332', '#B8935A', '#6B5B95', '#7A2E2E']
+const PLAYER_BG = ['#3D7A5C', '#B8703C', '#6B5B95', '#7A2E2E']
 
 const MODE_LABELS: Record<string, string> = {
   stroke: 'Stroke Play', matchplay_individual: 'Match Play',
@@ -29,12 +29,12 @@ function ScoreBadge({ strokes, par }: { strokes: number | null; par: number }) {
   if (!strokes) return <span style={{ color: 'var(--text3)', fontSize: 13 }}>—</span>
   const d = strokes - par
   const styles: Record<string, React.CSSProperties> = {
-    eagle: { background: '#fbbf24', color: '#1a0f00', borderRadius: '50%' },
-    birdie: { background: '#2dd4bf', color: '#051209', borderRadius: 4 },
+    eagle: { background: '#C9A227', color: '#F6ECDA', borderRadius: '50%' },
+    birdie: { background: '#1B4332', color: '#F1EEE4', borderRadius: 4 },
     par: { background: 'var(--surface2)', color: 'var(--text)', border: '1px solid var(--border2)', borderRadius: 4 },
-    bogey: { background: 'rgba(248,113,113,0.15)', color: '#f87171', border: '1px solid rgba(248,113,113,0.3)', borderRadius: 4 },
-    double: { background: 'rgba(248,113,113,0.3)', color: '#fca5a5', border: '2px solid #f87171', borderRadius: 4 },
-    triple: { background: '#7f1d1d', color: '#fca5a5', borderRadius: 4 },
+    bogey: { background: 'rgba(122,46,46,0.1)', color: '#7A2E2E', border: '1px solid rgba(122,46,46,0.18)', borderRadius: 4 },
+    double: { background: 'rgba(122,46,46,0.18)', color: '#9C4A44', border: '2px solid #7A2E2E', borderRadius: 4 },
+    triple: { background: '#F3E2E0', color: '#9C4A44', borderRadius: 4 },
   }
   const k = d <= -2 ? 'eagle' : d === -1 ? 'birdie' : d === 0 ? 'par' : d === 1 ? 'bogey' : d === 2 ? 'double' : 'triple'
   return (
@@ -48,10 +48,10 @@ function ScoreBadge({ strokes, par }: { strokes: number | null; par: number }) {
 // En vivo: running>0 => "X UP", running<0 => "X DOWN", 0 => "ALL SQUARE".
 // Terminado: resultado real (X&Y) en verde si gana la izquierda, rojo si pierde.
 function relStatusDisplay(running: number, concluded: boolean, concludedStatus: string, leftWon: boolean | null) {
-  if (concluded) return { text: concludedStatus, color: leftWon ? '#34d399' : '#f87171' }
-  if (running > 0) return { text: `${running} UP`, color: '#2dd4bf' }
-  if (running < 0) return { text: `${-running} DOWN`, color: '#2dd4bf' }
-  return { text: 'ALL SQUARE', color: '#2dd4bf' }
+  if (concluded) return { text: concludedStatus, color: leftWon ? '#2F6B4F' : '#7A2E2E' }
+  if (running > 0) return { text: `${running} UP`, color: '#1B4332' }
+  if (running < 0) return { text: `${-running} DOWN`, color: '#1B4332' }
+  return { text: 'ALL SQUARE', color: '#1B4332' }
 }
 
 function RelStatusBadge({ running, concluded, concludedStatus, leftWon, label }: { running: number; concluded: boolean; concludedStatus: string; leftWon: boolean | null; label: string }) {
@@ -292,7 +292,7 @@ export default function RoundPage() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       <TopBar />
-      <header style={{ background: 'linear-gradient(135deg, #0a1f0f 0%, #071409 100%)', borderBottom: '1px solid var(--border)', padding: '18px 16px 14px' }}>
+      <header style={{ background: 'linear-gradient(135deg, #EDEAD8 0%, #F1EEE4 100%)', borderBottom: '1px solid var(--border)', padding: '18px 16px 14px' }}>
         <div style={{ maxWidth: 800, margin: '0 auto' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
             <div>
@@ -307,25 +307,25 @@ export default function RoundPage() {
                 {new Date(r.date).toLocaleDateString('es-CL', { day: 'numeric', month: 'long' })} · {holes.length} hoyos · {MODE_LABELS[r.mode]}
               </div>
             </div>
-            {saving && <div style={{ marginLeft: 'auto', fontSize: 11, color: '#2dd4bf' }}>💾</div>}
+            {saving && <div style={{ marginLeft: 'auto', fontSize: 11, color: '#1B4332' }}>💾</div>}
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, flexShrink: 0 }}>
               {r.mode === 'stroke_grupal' && (r as any).grupal && (
                 <Link href={`/leaderboard/${id}`} style={{
-                  background: 'rgba(56,189,248,0.12)',
-                  border: '1px solid rgba(56,189,248,0.3)', color: '#38bdf8',
+                  background: 'rgba(43,95,122,0.1)',
+                  border: '1px solid rgba(43,95,122,0.18)', color: '#2B5F7A',
                   borderRadius: 8, padding: '6px 12px', fontSize: 12,
                   textDecoration: 'none'
                 }}>🏆 Leaderboard</Link>
               )}
               <Link href={`/round/${id}/edit`} style={{
-                background: 'rgba(245,158,11,0.1)',
-                border: '1px solid rgba(245,158,11,0.25)', color: '#f59e0b',
+                background: 'rgba(184,147,90,0.12)',
+                border: '1px solid rgba(184,147,90,0.2)', color: '#B8935A',
                 borderRadius: 8, padding: '6px 12px', fontSize: 12,
                 textDecoration: 'none'
               }}>✎ Editar</Link>
               <button onClick={initiateDelete} disabled={deleting} style={{
-                background: 'rgba(248,113,113,0.1)',
-                border: '1px solid rgba(248,113,113,0.2)', color: '#f87171',
+                background: 'rgba(122,46,46,0.08)',
+                border: '1px solid rgba(122,46,46,0.12)', color: '#7A2E2E',
                 borderRadius: 8, padding: '6px 12px', fontSize: 12,
                 cursor: 'pointer'
               }}>🗑 Borrar</button>
@@ -351,8 +351,8 @@ export default function RoundPage() {
         {tabs.map(t => (
           <button key={t.key} onClick={() => setActiveTab(t.key)} style={{
             padding: '10px 16px', background: 'transparent', border: 'none',
-            borderBottom: `2px solid ${activeTab === t.key ? '#2dd4bf' : 'transparent'}`,
-            color: activeTab === t.key ? '#2dd4bf' : 'var(--text3)',
+            borderBottom: `2px solid ${activeTab === t.key ? '#1B4332' : 'transparent'}`,
+            color: activeTab === t.key ? '#1B4332' : 'var(--text3)',
             fontFamily: 'var(--body)', fontSize: 13, fontWeight: 500, cursor: 'pointer'
           }}>{t.label}</button>
         ))}
@@ -379,14 +379,14 @@ export default function RoundPage() {
                         {holeSet.map(h => (
                           <th key={h.hole_number} style={{ width: 42, padding: '6px 4px', fontSize: 12, color: 'var(--text3)', background: 'var(--surface2)', border: '1px solid var(--border)' }}>
                             <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text2)' }}>{h.hole_number}</div>
-                            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text3)' }}>P{h.par}</div><div style={{ fontSize: 11, fontWeight: 700, color: '#2dd4bf' }}>V{h.handicap}</div>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text3)' }}>P{h.par}</div><div style={{ fontSize: 11, fontWeight: 700, color: '#1B4332' }}>V{h.handicap}</div>
                           </th>
                         ))}
-                        <th style={{ width: 52, padding: '6px 8px', fontSize: 11, color: '#2dd4bf', background: 'var(--surface2)', border: '1px solid var(--border)' }}>
+                        <th style={{ width: 52, padding: '6px 8px', fontSize: 11, color: '#1B4332', background: 'var(--surface2)', border: '1px solid var(--border)' }}>
                           {setLabel}
                         </th>
                         {isBack && (
-                          <th style={{ width: 56, padding: '6px 8px', fontSize: 11, color: '#fbbf24', background: 'var(--surface2)', border: '1px solid var(--border)' }}>
+                          <th style={{ width: 56, padding: '6px 8px', fontSize: 11, color: '#C9A227', background: 'var(--surface2)', border: '1px solid var(--border)' }}>
                             TOTAL
                           </th>
                         )}
@@ -422,7 +422,7 @@ export default function RoundPage() {
                               {setSum > 0 ? setSum : '—'}
                             </td>
                             {isBack && (
-                              <td style={{ padding: '6px 8px', border: '1px solid var(--border)', background: 'var(--surface)', textAlign: 'center', fontWeight: 700, color: '#fbbf24', fontSize: 14 }}>
+                              <td style={{ padding: '6px 8px', border: '1px solid var(--border)', background: 'var(--surface)', textAlign: 'center', fontWeight: 700, color: '#C9A227', fontSize: 14 }}>
                                 {totalSum > 0 ? totalSum : '—'}
                               </td>
                             )}
@@ -437,9 +437,9 @@ export default function RoundPage() {
             })}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, paddingTop: 8 }}>
               {[
-                { label: 'Eagle', bg: '#fbbf24', r: '50%' }, { label: 'Birdie', bg: '#2dd4bf', r: 4 },
+                { label: 'Eagle', bg: '#C9A227', r: '50%' }, { label: 'Birdie', bg: '#1B4332', r: 4 },
                 { label: 'Par', bg: 'var(--surface2)', border: '1px solid var(--border2)' },
-                { label: 'Bogey', bg: 'rgba(248,113,113,0.15)', border: '1px solid rgba(248,113,113,0.3)' },
+                { label: 'Bogey', bg: 'rgba(122,46,46,0.1)', border: '1px solid rgba(122,46,46,0.18)' },
               ].map((l: any) => (
                 <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'var(--text3)' }}>
                   <div style={{ width: 14, height: 14, background: l.bg, borderRadius: l.r || 3, border: l.border }} />
@@ -533,7 +533,7 @@ export default function RoundPage() {
               return v
             })()
             const colorize = (n: number | null) =>
-              n === null ? 'var(--text3)' : n > 0 ? '#2dd4bf' : n < 0 ? '#f87171' : 'var(--text)'
+              n === null ? 'var(--text3)' : n > 0 ? '#1B4332' : n < 0 ? '#7A2E2E' : 'var(--text)'
             const fmt = (n: number | null) => n === null ? '—' : n > 0 ? `+${n}` : `${n}`
             return (
               <tr>
@@ -595,14 +595,14 @@ export default function RoundPage() {
                               {holeSet.map(h => (
                                 <th key={h.hole_number} style={{ width: 42, padding: '6px 4px', fontSize: 12, color: 'var(--text3)', background: 'var(--surface2)', border: '1px solid var(--border)' }}>
                                   <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text2)' }}>{h.hole_number}</div>
-                                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text3)' }}>P{h.par}</div><div style={{ fontSize: 11, fontWeight: 700, color: '#2dd4bf' }}>V{h.handicap}</div>
+                                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text3)' }}>P{h.par}</div><div style={{ fontSize: 11, fontWeight: 700, color: '#1B4332' }}>V{h.handicap}</div>
                                 </th>
                               ))}
-                              <th style={{ width: 52, padding: '6px 8px', fontSize: 11, color: '#2dd4bf', background: 'var(--surface2)', border: '1px solid var(--border)' }}>
+                              <th style={{ width: 52, padding: '6px 8px', fontSize: 11, color: '#1B4332', background: 'var(--surface2)', border: '1px solid var(--border)' }}>
                                 {setLabel}
                               </th>
                               {isBack && (
-                                <th style={{ width: 56, padding: '6px 8px', fontSize: 11, color: '#fbbf24', background: 'var(--surface2)', border: '1px solid var(--border)' }}>
+                                <th style={{ width: 56, padding: '6px 8px', fontSize: 11, color: '#C9A227', background: 'var(--surface2)', border: '1px solid var(--border)' }}>
                                   TOTAL
                                 </th>
                               )}
@@ -640,12 +640,12 @@ export default function RoundPage() {
                                       <td key={h.hole_number} style={{ padding: 3, border: '1px solid var(--border)', background: 'var(--surface)', textAlign: 'center' }}>
                                         {neto !== null ? (
                                           <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 26, height: 26, fontSize: 12, fontWeight: 700,
-                                            background: extra > 0 ? 'rgba(45,212,191,0.15)' : 'var(--surface2)',
-                                            border: extra > 0 ? '1px solid rgba(45,212,191,0.4)' : '1px solid var(--border)',
+                                            background: extra > 0 ? 'rgba(27,67,50,0.1)' : 'var(--surface2)',
+                                            border: extra > 0 ? '1px solid rgba(27,67,50,0.16)' : '1px solid var(--border)',
                                             borderRadius: 4, position: 'relative'
                                           }}>
                                             {neto}
-                                            {extra > 0 && <span style={{ position: 'absolute', top: -4, right: -4, width: 10, height: 10, background: '#2dd4bf', borderRadius: '50%', fontSize: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#051209', fontWeight: 900 }}>{extra}</span>}
+                                            {extra > 0 && <span style={{ position: 'absolute', top: -4, right: -4, width: 10, height: 10, background: '#1B4332', borderRadius: '50%', fontSize: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#F1EEE4', fontWeight: 900 }}>{extra}</span>}
                                           </div>
                                         ) : (
                                           <span style={{ color: 'var(--text3)', fontSize: 13 }}>—</span>
@@ -658,14 +658,14 @@ export default function RoundPage() {
                                   </td>
                                   {isBack && (
                                     <td style={{ padding: '6px 8px', border: '1px solid var(--border)', background: 'var(--surface)', textAlign: 'center', fontWeight: 700, fontSize: 14 }}>
-                                      {hasTotal ? <span style={{ color: '#fbbf24' }}>{totalNeto}</span> : '—'}
+                                      {hasTotal ? <span style={{ color: '#C9A227' }}>{totalNeto}</span> : '—'}
                                     </td>
                                   )}
                                 </tr>
                               )
                             })}
                             {showStatus && statuses && renderStatusRow(
-                              holeSet, statuses, 'ESTADO', PLAYER_COLORS[p1pi] || '#2dd4bf', isBack
+                              holeSet, statuses, 'ESTADO', PLAYER_COLORS[p1pi] || '#1B4332', isBack
                             )}
                           </tbody>
                         </table>
@@ -733,12 +733,12 @@ export default function RoundPage() {
                               {holeSet.map(h => (
                                 <th key={h.hole_number} style={{ width: 42, padding: '6px 4px', fontSize: 12, color: 'var(--text3)', background: 'var(--surface2)', border: '1px solid var(--border)' }}>
                                   <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text2)' }}>{h.hole_number}</div>
-                                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text3)' }}>P{h.par}</div><div style={{ fontSize: 11, fontWeight: 700, color: '#2dd4bf' }}>V{h.handicap}</div>
+                                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text3)' }}>P{h.par}</div><div style={{ fontSize: 11, fontWeight: 700, color: '#1B4332' }}>V{h.handicap}</div>
                                 </th>
                               ))}
-                              <th style={{ width: 52, padding: '6px 8px', fontSize: 11, color: '#2dd4bf', background: 'var(--surface2)', border: '1px solid var(--border)' }}>{setLabel}</th>
+                              <th style={{ width: 52, padding: '6px 8px', fontSize: 11, color: '#1B4332', background: 'var(--surface2)', border: '1px solid var(--border)' }}>{setLabel}</th>
                               {isBack && (
-                                <th style={{ width: 56, padding: '6px 8px', fontSize: 11, color: '#fbbf24', background: 'var(--surface2)', border: '1px solid var(--border)' }}>TOTAL</th>
+                                <th style={{ width: 56, padding: '6px 8px', fontSize: 11, color: '#C9A227', background: 'var(--surface2)', border: '1px solid var(--border)' }}>TOTAL</th>
                               )}
                             </tr>
                           </thead>
@@ -779,7 +779,7 @@ export default function RoundPage() {
                                     {setRes.ok ? setRes.sum : '—'}
                                   </td>
                                   {isBack && (
-                                    <td style={{ padding: '6px 8px', border: '1px solid var(--border)', background: 'var(--surface)', textAlign: 'center', fontWeight: 700, fontSize: 14, color: '#fbbf24' }}>
+                                    <td style={{ padding: '6px 8px', border: '1px solid var(--border)', background: 'var(--surface)', textAlign: 'center', fontWeight: 700, fontSize: 14, color: '#C9A227' }}>
                                       {totalRes.ok ? totalRes.sum : '—'}
                                     </td>
                                   )}
@@ -833,20 +833,20 @@ export default function RoundPage() {
 
             const matches = [
               {
-                key: 'dobles', label: 'DOBLES', color: '#34d399', pct: dPct,
+                key: 'dobles', label: 'DOBLES', color: '#2F6B4F', pct: dPct,
                 left: team1.map(p => p.name).join(' y ') || 'Equipo 1',
                 right: team2.map(p => p.name).join(' y ') || 'Equipo 2',
                 status: lastNonNull(computeDoublesData(team1, team2, dPct).map(d => d.status)),
                 thru: thruOf([...team1, ...team2]),
                 stats: netStats([...team1, ...team2], dPct),
                 content: dMode === 'matchplay'
-                  ? <DoublesNetTable title="DOBLES — MATCH PLAY" titleColor="#34d399" team1Players={team1} team2Players={team2} pct={dPct} />
-                  : <NetTable title="DOBLES — STROKE" titleColor="#34d399" groupPlayers={players} pct={dPct} strategy="individual" />
+                  ? <DoublesNetTable title="DOBLES — MATCH PLAY" titleColor="#2F6B4F" team1Players={team1} team2Players={team2} pct={dPct} />
+                  : <NetTable title="DOBLES — STROKE" titleColor="#2F6B4F" groupPlayers={players} pct={dPct} strategy="individual" />
               },
               ...pairs.map(([p1, p2], idx) => {
                 const pi1 = players.findIndex(p => p.id === p1.id)
                 return {
-                  key: `i${idx}`, label: `INDIVIDUAL ${idx + 1}`, color: PLAYER_COLORS[pi1] || '#f59e0b', pct: iPct,
+                  key: `i${idx}`, label: `INDIVIDUAL ${idx + 1}`, color: PLAYER_COLORS[pi1] || '#B8935A', pct: iPct,
                   left: p1.name, right: p2.name,
                   status: lastNonNull(computeIndivStatuses(p1, p2, iPct)),
                   thru: thruOf([p1, p2]),
@@ -874,7 +874,7 @@ export default function RoundPage() {
                 <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
                   <div style={{ flex: 1, textAlign: 'center', background: 'var(--surface)', border: '1px solid #2dd4bf33', borderRadius: 10, padding: '8px 6px' }}>
                     <div style={{ fontSize: 10, color: 'var(--text3)', letterSpacing: 1 }}>EQUIPO 1</div>
-                    <div style={{ fontFamily: 'var(--display)', fontSize: 24, fontWeight: 700, color: '#2dd4bf', lineHeight: 1.1 }}>{fmtPts(pts1)}</div>
+                    <div style={{ fontFamily: 'var(--display)', fontSize: 24, fontWeight: 700, color: '#1B4332', lineHeight: 1.1 }}>{fmtPts(pts1)}</div>
                     <div style={{ fontSize: 10, color: 'var(--text3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{team1.map(p => p.name).join(' y ')}</div>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text3)', fontSize: 10, minWidth: 44, textAlign: 'center', lineHeight: 1.3 }}>
@@ -884,7 +884,7 @@ export default function RoundPage() {
                   </div>
                   <div style={{ flex: 1, textAlign: 'center', background: 'var(--surface)', border: '1px solid #f8717133', borderRadius: 10, padding: '8px 6px' }}>
                     <div style={{ fontSize: 10, color: 'var(--text3)', letterSpacing: 1 }}>EQUIPO 2</div>
-                    <div style={{ fontFamily: 'var(--display)', fontSize: 24, fontWeight: 700, color: '#f87171', lineHeight: 1.1 }}>{fmtPts(pts2)}</div>
+                    <div style={{ fontFamily: 'var(--display)', fontSize: 24, fontWeight: 700, color: '#7A2E2E', lineHeight: 1.1 }}>{fmtPts(pts2)}</div>
                     <div style={{ fontSize: 10, color: 'var(--text3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{team2.map(p => p.name).join(' y ')}</div>
                   </div>
                 </div>
@@ -895,7 +895,7 @@ export default function RoundPage() {
                   const leadFirst = st !== null && st > 0
                   const leadSecond = st !== null && st < 0
                   const badge = st === null ? '—' : st === 0 ? 'AS' : `${Math.abs(st)}↑`
-                  const badgeColor = st === null ? 'var(--text3)' : st === 0 ? 'var(--text2)' : leadFirst ? '#2dd4bf' : '#f87171'
+                  const badgeColor = st === null ? 'var(--text3)' : st === 0 ? 'var(--text2)' : leadFirst ? '#1B4332' : '#7A2E2E'
                   return (
                     <div key={m.key} style={{ background: 'var(--surface)', border: `1px solid ${m.color}33`, borderRadius: 12, overflow: 'hidden' }}>
                       <button onClick={() => toggleMatch(m.key)} style={{
@@ -909,9 +909,9 @@ export default function RoundPage() {
                             <span style={{ fontSize: 10, color: 'var(--text3)' }}>{m.thru > 0 ? `jugados ${m.thru}` : 'sin jugar'}</span>
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span style={{ flex: 1, textAlign: 'right', fontSize: 13, fontWeight: leadFirst ? 700 : 400, color: leadFirst ? '#2dd4bf' : 'var(--text2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.left}</span>
+                            <span style={{ flex: 1, textAlign: 'right', fontSize: 13, fontWeight: leadFirst ? 700 : 400, color: leadFirst ? '#1B4332' : 'var(--text2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.left}</span>
                             <span style={{ flexShrink: 0, minWidth: 42, textAlign: 'center', fontFamily: 'var(--display)', fontSize: 13, fontWeight: 700, color: badgeColor, background: `${badgeColor}1a`, borderRadius: 6, padding: '3px 6px' }}>{badge}</span>
-                            <span style={{ flex: 1, textAlign: 'left', fontSize: 13, fontWeight: leadSecond ? 700 : 400, color: leadSecond ? '#f87171' : 'var(--text2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.right}</span>
+                            <span style={{ flex: 1, textAlign: 'left', fontSize: 13, fontWeight: leadSecond ? 700 : 400, color: leadSecond ? '#7A2E2E' : 'var(--text2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.right}</span>
                           </div>
                         </div>
                       </button>
@@ -924,7 +924,7 @@ export default function RoundPage() {
                               <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12, padding: '3px 0' }}>
                                 <span style={{ color: 'var(--text2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, marginRight: 8 }}>{s.name}</span>
                                 <span style={{ color: 'var(--text3)', flexShrink: 0 }}>
-                                  {s.avgNet === null ? '—' : <>neto/hoyo <strong style={{ color: 'var(--text)' }}>{s.avgNet.toFixed(1)}</strong> · vs par <strong style={{ color: (s.avgVsPar ?? 0) <= 0 ? '#2dd4bf' : '#f87171' }}>{(s.avgVsPar ?? 0) >= 0 ? '+' : ''}{(s.avgVsPar ?? 0).toFixed(1)}</strong></>}
+                                  {s.avgNet === null ? '—' : <>neto/hoyo <strong style={{ color: 'var(--text)' }}>{s.avgNet.toFixed(1)}</strong> · vs par <strong style={{ color: (s.avgVsPar ?? 0) <= 0 ? '#1B4332' : '#7A2E2E' }}>{(s.avgVsPar ?? 0) >= 0 ? '+' : ''}{(s.avgVsPar ?? 0).toFixed(1)}</strong></>}
                                 </span>
                               </div>
                             ))}
@@ -950,7 +950,7 @@ export default function RoundPage() {
             return (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <div style={{ background: 'var(--surface)', border: '1px solid #f8717120', borderRadius: 12, padding: '14px 14px 4px' }}>
-                  <NetTable title="BISMARCK" titleColor="#f87171" groupPlayers={players} pct={bPct} strategy="relative" />
+                  <NetTable title="BISMARCK" titleColor="#7A2E2E" groupPlayers={players} pct={bPct} strategy="relative" />
                 </div>
                 {pairs.map(([p1, p2], idx) => {
                   const pi1 = players.findIndex(p => p.id === p1.id)
@@ -976,7 +976,7 @@ export default function RoundPage() {
             const team2 = players.filter(p => p.team === 2)
             return (
               <>
-                <DoublesNetTable title="MATCH PLAY DOBLES" titleColor="#a78bfa"
+                <DoublesNetTable title="MATCH PLAY DOBLES" titleColor="#6B5B95"
                   team1Players={team1} team2Players={team2} pct={hcpPct} />
                 <div style={{ fontSize: 11, color: 'var(--text3)', paddingTop: 4 }}>
                   Fila <strong style={{ color: 'var(--text2)' }}>ESTADO</strong>: positivo = Team 1 arriba, negativo = abajo.
@@ -1020,7 +1020,7 @@ export default function RoundPage() {
                       const pi = players.findIndex(p => p.id === res.playerId)
                       return (
                         <tr key={res.playerId}>
-                          <td style={{ padding: '10px 12px', border: '1px solid var(--border)', textAlign: 'center', fontFamily: 'var(--display)', fontSize: 18, color: rank === 0 ? '#f59e0b' : 'var(--text3)' }}>{rank + 1}</td>
+                          <td style={{ padding: '10px 12px', border: '1px solid var(--border)', textAlign: 'center', fontFamily: 'var(--display)', fontSize: 18, color: rank === 0 ? '#B8935A' : 'var(--text3)' }}>{rank + 1}</td>
                           <td style={{ padding: '10px 12px', border: '1px solid var(--border)' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                               <div style={{ width: 24, height: 24, borderRadius: '50%', background: PLAYER_BG[pi], display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: 'white' }}>{res.name[0]?.toUpperCase()}</div>
@@ -1029,11 +1029,11 @@ export default function RoundPage() {
                           </td>
                           <td style={{ padding: '10px 12px', border: '1px solid var(--border)', textAlign: 'center', color: 'var(--text3)' }}>{players[pi]?.handicap}</td>
                           <td style={{ padding: '10px 12px', border: '1px solid var(--border)', textAlign: 'center', fontWeight: 600 }}>{res.gross || '—'}</td>
-                          <td style={{ padding: '10px 12px', border: '1px solid var(--border)', textAlign: 'center', fontWeight: 600, color: '#2dd4bf' }}>{res.gross ? res.net : '—'}</td>
-                          <td style={{ padding: '10px 12px', border: '1px solid var(--border)', textAlign: 'center', fontWeight: 600, color: res.overUnder < 0 ? '#2dd4bf' : res.overUnder > 0 ? '#f87171' : 'var(--text)' }}>
+                          <td style={{ padding: '10px 12px', border: '1px solid var(--border)', textAlign: 'center', fontWeight: 600, color: '#1B4332' }}>{res.gross ? res.net : '—'}</td>
+                          <td style={{ padding: '10px 12px', border: '1px solid var(--border)', textAlign: 'center', fontWeight: 600, color: res.overUnder < 0 ? '#1B4332' : res.overUnder > 0 ? '#7A2E2E' : 'var(--text)' }}>
                             {res.gross ? (res.overUnder > 0 ? `+${res.overUnder}` : res.overUnder) : '—'}
                           </td>
-                          <td style={{ padding: '10px 12px', border: '1px solid var(--border)', textAlign: 'center', fontFamily: 'var(--display)', fontSize: 20, color: '#f59e0b' }}>{res.stableford || '—'}</td>
+                          <td style={{ padding: '10px 12px', border: '1px solid var(--border)', textAlign: 'center', fontFamily: 'var(--display)', fontSize: 20, color: '#B8935A' }}>{res.stableford || '—'}</td>
                         </tr>
                       )
                     })}
@@ -1046,13 +1046,13 @@ export default function RoundPage() {
             {r.mode === 'stroke_grupal' && (
               <>
                 {(r as any).grupal && (
-                  <div style={{ background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                  <div style={{ background: 'rgba(43,95,122,0.08)', border: '1px solid rgba(43,95,122,0.15)', borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
                     <div>
                       <div style={{ fontSize: 10, color: 'var(--text3)', letterSpacing: 1 }}>COMPETENCIA GRUPAL</div>
-                      <div style={{ fontFamily: 'var(--display)', fontSize: 18, color: '#38bdf8', letterSpacing: 1 }}>{(r as any).competition_name || '—'}</div>
+                      <div style={{ fontFamily: 'var(--display)', fontSize: 18, color: '#2B5F7A', letterSpacing: 1 }}>{(r as any).competition_name || '—'}</div>
                     </div>
                     <Link href={`/leaderboard/${id}`} style={{
-                      background: '#38bdf8', color: '#04121a', borderRadius: 10, padding: '10px 16px',
+                      background: '#2B5F7A', color: '#E9EFEA', borderRadius: 10, padding: '10px 16px',
                       fontFamily: 'var(--display)', fontSize: 14, letterSpacing: 1, textDecoration: 'none'
                     }}>🏆 Ver Leaderboard</Link>
                   </div>
@@ -1276,7 +1276,7 @@ export default function RoundPage() {
                       <div key={t.playerId} style={{ flex: 1, textAlign: 'center', padding: '14px 10px', borderRadius: 10, background: rank === 0 ? `${PLAYER_BG[pi]}20` : 'var(--surface2)', border: `1px solid ${rank === 0 ? PLAYER_BG[pi] + '40' : 'var(--border)'}` }}>
                         <div style={{ width: 32, height: 32, borderRadius: '50%', background: PLAYER_BG[pi], display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: 'white', margin: '0 auto 8px', fontSize: 13 }}>{t.name[0]?.toUpperCase()}</div>
                         <div style={{ fontSize: 13, fontWeight: 600, color: PLAYER_COLORS[pi], marginBottom: 4 }}>{t.name}</div>
-                        <div style={{ fontFamily: 'var(--display)', fontSize: 32, color: rank === 0 ? '#f59e0b' : 'var(--text)' }}>{t.total}</div>
+                        <div style={{ fontFamily: 'var(--display)', fontSize: 32, color: rank === 0 ? '#B8935A' : 'var(--text)' }}>{t.total}</div>
                         <div style={{ fontSize: 10, color: 'var(--text3)' }}>puntos</div>
                       </div>
                     )
@@ -1292,7 +1292,7 @@ export default function RoundPage() {
                   <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
                     <div style={{ flex: 1, textAlign: 'center', background: 'var(--surface)', border: '1px solid #2dd4bf33', borderRadius: 12, padding: '12px 8px' }}>
                       <div style={{ fontSize: 10, color: 'var(--text3)', letterSpacing: 1 }}>EQUIPO 1</div>
-                      <div style={{ fontFamily: 'var(--display)', fontSize: 30, fontWeight: 700, color: '#2dd4bf', lineHeight: 1.1 }}>{fmtPts(ryderPoints.t1)}</div>
+                      <div style={{ fontFamily: 'var(--display)', fontSize: 30, fontWeight: 700, color: '#1B4332', lineHeight: 1.1 }}>{fmtPts(ryderPoints.t1)}</div>
                       <div style={{ fontSize: 10, color: 'var(--text3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{players.filter(p => p.team === 1).map(p => p.name).join(' y ')}</div>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text3)', fontSize: 10, minWidth: 44 }}>
@@ -1300,13 +1300,13 @@ export default function RoundPage() {
                     </div>
                     <div style={{ flex: 1, textAlign: 'center', background: 'var(--surface)', border: '1px solid #f8717133', borderRadius: 12, padding: '12px 8px' }}>
                       <div style={{ fontSize: 10, color: 'var(--text3)', letterSpacing: 1 }}>EQUIPO 2</div>
-                      <div style={{ fontFamily: 'var(--display)', fontSize: 30, fontWeight: 700, color: '#f87171', lineHeight: 1.1 }}>{fmtPts(ryderPoints.t2)}</div>
+                      <div style={{ fontFamily: 'var(--display)', fontSize: 30, fontWeight: 700, color: '#7A2E2E', lineHeight: 1.1 }}>{fmtPts(ryderPoints.t2)}</div>
                       <div style={{ fontSize: 10, color: 'var(--text3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{players.filter(p => p.team === 2).map(p => p.name).join(' y ')}</div>
                     </div>
                   </div>
                 )}
                 <div style={{ background: 'var(--surface)', border: '1px solid #34d39930', borderRadius: 12, overflow: 'hidden' }}>
-                  <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontFamily: 'var(--display)', fontSize: 14, letterSpacing: 2, color: '#34d399', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontFamily: 'var(--display)', fontSize: 14, letterSpacing: 2, color: '#2F6B4F', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span>DOBLES — {((r as any).dobles_mode === 'stroke' ? 'STROKE' : 'MATCH PLAY')} · HCP {(r as any).dobles_hcp_pct}%</span>
                     <span style={{ fontFamily: 'var(--body)', fontSize: 11, color: 'var(--text3)', letterSpacing: 0 }}>vale 2 pts</span>
                   </div>
@@ -1357,15 +1357,15 @@ export default function RoundPage() {
                         const best = (t: number) => Math.max(0, ...players.filter(p => p.team === t).map(p => combinado4Result.doblesStroke!.find(rr => rr.playerId === p.id)?.stableford ?? 0))
                         const b1 = best(1), b2 = best(2); lead = b1 > b2 ? 1 : b2 > b1 ? 2 : null
                       }
-                      if (lead === 1) return <span style={{ color: '#2dd4bf' }}>2 pts · Equipo 1</span>
-                      if (lead === 2) return <span style={{ color: '#f87171' }}>2 pts · Equipo 2</span>
+                      if (lead === 1) return <span style={{ color: '#1B4332' }}>2 pts · Equipo 1</span>
+                      if (lead === 2) return <span style={{ color: '#7A2E2E' }}>2 pts · Equipo 2</span>
                       return <span style={{ color: 'var(--text3)' }}>1 y 1 · AS</span>
                     })()}
                   </div>
                 </div>
 
                 <div style={{ background: 'var(--surface)', border: '1px solid #f59e0b30', borderRadius: 12, overflow: 'hidden' }}>
-                  <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontFamily: 'var(--display)', fontSize: 14, letterSpacing: 2, color: '#f59e0b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontFamily: 'var(--display)', fontSize: 14, letterSpacing: 2, color: '#B8935A', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span>INDIVIDUALES — {((r as any).individual_mode === 'stroke' ? 'STROKE' : 'MATCH PLAY')} · HCP {(r as any).individual_hcp_pct}%</span>
                     <span style={{ fontFamily: 'var(--body)', fontSize: 11, color: 'var(--text3)', letterSpacing: 0 }}>1 pt c/u</span>
                   </div>
@@ -1393,7 +1393,7 @@ export default function RoundPage() {
             {r.mode === 'combinado_bismarck' && combinadoBismarckResult && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <div style={{ background: 'var(--surface)', border: '1px solid #f8717130', borderRadius: 12, overflow: 'hidden' }}>
-                  <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontFamily: 'var(--display)', fontSize: 14, letterSpacing: 2, color: '#f87171' }}>
+                  <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontFamily: 'var(--display)', fontSize: 14, letterSpacing: 2, color: '#7A2E2E' }}>
                     BISMARCK · HCP {(r as any).bismarck_hcp_pct}%
                   </div>
                   <div style={{ display: 'flex', padding: 16, gap: 12 }}>
@@ -1403,7 +1403,7 @@ export default function RoundPage() {
                         <div key={t.playerId} style={{ flex: 1, textAlign: 'center', padding: '12px 8px', borderRadius: 10, background: rank === 0 ? `${PLAYER_BG[pi]}20` : 'var(--surface2)', border: `1px solid ${rank === 0 ? PLAYER_BG[pi] + '40' : 'var(--border)'}` }}>
                           <div style={{ width: 28, height: 28, borderRadius: '50%', background: PLAYER_BG[pi], display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: 'white', margin: '0 auto 6px', fontSize: 11 }}>{t.name[0]?.toUpperCase()}</div>
                           <div style={{ fontSize: 12, fontWeight: 600, color: PLAYER_COLORS[pi] }}>{t.name}</div>
-                          <div style={{ fontFamily: 'var(--display)', fontSize: 28, color: rank === 0 ? '#f59e0b' : 'var(--text)' }}>{t.total}</div>
+                          <div style={{ fontFamily: 'var(--display)', fontSize: 28, color: rank === 0 ? '#B8935A' : 'var(--text)' }}>{t.total}</div>
                         </div>
                       )
                     })}
@@ -1411,7 +1411,7 @@ export default function RoundPage() {
                 </div>
 
                 <div style={{ background: 'var(--surface)', border: '1px solid #f59e0b30', borderRadius: 12, overflow: 'hidden' }}>
-                  <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontFamily: 'var(--display)', fontSize: 14, letterSpacing: 2, color: '#f59e0b' }}>
+                  <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontFamily: 'var(--display)', fontSize: 14, letterSpacing: 2, color: '#B8935A' }}>
                     INDIVIDUALES — {((r as any).individual_mode === 'stroke' ? 'STROKE' : 'MATCH PLAY')} · HCP {(r as any).individual_hcp_pct}%
                   </div>
                   <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -1441,23 +1441,23 @@ export default function RoundPage() {
           zIndex: 100, padding: 20
         }}>
           <div onClick={e => e.stopPropagation()} style={{
-            background: 'var(--surface)', border: '1px solid rgba(248,113,113,0.3)',
+            background: 'var(--surface)', border: '1px solid rgba(122,46,46,0.18)',
             borderRadius: 14, padding: 24, maxWidth: 380, width: '100%'
           }}>
-            <div style={{ fontFamily: 'var(--display)', fontSize: 18, letterSpacing: 2, color: '#f87171', marginBottom: 8 }}>
+            <div style={{ fontFamily: 'var(--display)', fontSize: 18, letterSpacing: 2, color: '#7A2E2E', marginBottom: 8 }}>
               🗑 BORRAR PARTIDA
             </div>
             <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 16, lineHeight: 1.5 }}>
               Esta acción no se puede deshacer. Para confirmar, escribe el código:
             </div>
             <div style={{
-              background: 'rgba(248,113,113,0.08)',
-              border: '1px solid rgba(248,113,113,0.25)',
+              background: 'rgba(122,46,46,0.06)',
+              border: '1px solid rgba(122,46,46,0.15)',
               borderRadius: 10, padding: '14px 16px', textAlign: 'center',
               marginBottom: 14
             }}>
               <div style={{ fontSize: 10, color: 'var(--text3)', letterSpacing: 2, marginBottom: 4 }}>CÓDIGO</div>
-              <div style={{ fontFamily: 'var(--display)', fontSize: 36, letterSpacing: 8, color: '#f87171', fontWeight: 700 }}>
+              <div style={{ fontFamily: 'var(--display)', fontSize: 36, letterSpacing: 8, color: '#7A2E2E', fontWeight: 700 }}>
                 {deleteCode}
               </div>
             </div>
@@ -1469,8 +1469,8 @@ export default function RoundPage() {
               placeholder="Escribe los 4 dígitos"
               style={{
                 width: '100%', boxSizing: 'border-box',
-                background: 'rgba(255,255,255,0.04)',
-                border: `1px solid ${deleteError ? '#f87171' : 'var(--border2)'}`,
+                background: 'rgba(27,42,26,0.04)',
+                border: `1px solid ${deleteError ? '#7A2E2E' : 'var(--border2)'}`,
                 borderRadius: 8, color: 'var(--text)',
                 padding: '12px 14px', fontSize: 18, letterSpacing: 6,
                 textAlign: 'center', outline: 'none', marginBottom: 4,
@@ -1478,7 +1478,7 @@ export default function RoundPage() {
               }}
             />
             {deleteError && (
-              <div style={{ fontSize: 12, color: '#f87171', marginBottom: 8 }}>Código incorrecto.</div>
+              <div style={{ fontSize: 12, color: '#7A2E2E', marginBottom: 8 }}>Código incorrecto.</div>
             )}
             <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
               <button onClick={cancelDelete} disabled={deleting} style={{
@@ -1488,9 +1488,9 @@ export default function RoundPage() {
               }}>Cancelar</button>
               <button onClick={confirmDelete} disabled={deleting || deleteInput.length !== 4} style={{
                 flex: 1, padding: '10px 14px',
-                background: deleteInput.length === 4 ? '#f87171' : 'rgba(248,113,113,0.3)',
+                background: deleteInput.length === 4 ? '#7A2E2E' : 'rgba(122,46,46,0.18)',
                 border: 'none', borderRadius: 8,
-                color: deleteInput.length === 4 ? '#1a0606' : 'rgba(255,255,255,0.4)',
+                color: deleteInput.length === 4 ? '#F3E2E0' : '#8B9285',
                 fontSize: 13, fontWeight: 700, cursor: deleteInput.length === 4 ? 'pointer' : 'not-allowed'
               }}>
                 {deleting ? 'Borrando…' : 'Borrar definitivamente'}

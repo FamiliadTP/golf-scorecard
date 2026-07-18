@@ -22,7 +22,7 @@ export default function CoursesPage() {
       <TopBar title="Mis Campos" />
       <div style={{ maxWidth: 640, margin: '0 auto', padding: '14px 16px 0', display: 'flex', justifyContent: 'flex-end' }}>
         <Link href="/course/new" style={{
-          background: '#2dd4bf', color: '#071209',
+          background: '#1B4332', color: '#F1EEE4',
           padding: '8px 16px', borderRadius: 8, fontWeight: 700, fontSize: 13
         }}>＋ Nuevo campo</Link>
       </div>
@@ -37,7 +37,7 @@ export default function CoursesPage() {
               border: '1px solid var(--border)',
               borderRadius: 12, padding: '14px 16px'
             }}>
-              <div style={{ fontWeight: 600, fontSize: 15 }}>{c.name}{c.loop_label ? <span style={{ color: '#2dd4bf' }}> · {c.loop_label}</span> : null}</div>
+              <div style={{ fontWeight: 600, fontSize: 15 }}>{c.name}{c.loop_label ? <span style={{ color: '#1B4332' }}> · {c.loop_label}</span> : null}</div>
               {c.club && <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 2 }}>{c.club}</div>}
               <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 4 }}>
                 {c.loop_label ? 'Vuelta de 9 (combinable)' : `${c.holes_count} hoyos`} · {(c.holes || []).length} cargados

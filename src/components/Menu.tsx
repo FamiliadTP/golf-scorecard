@@ -21,7 +21,7 @@ export default function Menu() {
         aria-label="Menú"
         style={{
           width: 42, height: 42, borderRadius: 10, flexShrink: 0,
-          background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border2)',
+          background: 'rgba(27,42,26,0.06)', border: '1px solid var(--border2)',
           color: 'var(--text2)', fontSize: 18, cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center'
         }}

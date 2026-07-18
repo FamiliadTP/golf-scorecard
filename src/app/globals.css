@@ -1,20 +1,20 @@
-@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
 
 :root {
-  --bg: #08100a;
-  --surface: #0d1a10;
-  --surface2: #112016;
-  --border: #1a3020;
-  --border2: #224030;
-  --green: #2dd4bf;
-  --green2: #16a34a;
-  --gold: #f59e0b;
-  --red: #f87171;
-  --text: #e2ede2;
-  --text2: #7aab8a;
-  --text3: #3d6b4f;
-  --display: 'Bebas Neue', sans-serif;
-  --body: 'DM Sans', sans-serif;
+  --bg: #F7F5EF;
+  --surface: #FFFFFF;
+  --surface2: #EFEBDD;
+  --border: #E1DCC9;
+  --border2: #CBC3A7;
+  --green: #1B4332;
+  --green2: #2F6B4F;
+  --gold: #B8935A;
+  --red: #7A2E2E;
+  --text: #22301F;
+  --text2: #5C6B57;
+  --text3: #8B9285;
+  --display: 'Fraunces', serif;
+  --body: 'IBM Plex Sans', sans-serif;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -37,7 +37,7 @@ input, select, button {
 
 /* Scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: var(--surface); }
+::-webkit-scrollbar-track { background: var(--surface2); }
 ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
 
 /* Animations */
@@ -48,6 +48,6 @@ input, select, button {
 .fade-in { animation: fadeIn 0.3s ease forwards; }
 
 @keyframes pulse-green {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(45,212,191,0.3); }
-  50% { box-shadow: 0 0 0 6px rgba(45,212,191,0); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(27,67,50,0.25); }
+  50% { box-shadow: 0 0 0 6px rgba(27,67,50,0); }
 }

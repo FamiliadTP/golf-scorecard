@@ -10,7 +10,7 @@ import {
   correctCombinedHandicaps, buildLoopRoundHoles
 } from '@/lib/golf'
 
-const GROUP_COLORS = ['#38bdf8', '#34d399', '#f59e0b', '#a78bfa', '#f87171', '#22d3ee', '#fb923c', '#e879f9']
+const GROUP_COLORS = ['#2B5F7A', '#2F6B4F', '#B8935A', '#6B5B95', '#7A2E2E', '#2B5F7A', '#B8703C', '#A65B7A']
 
 interface Row extends LeaderboardEntry { groupIdx: number }
 
@@ -102,7 +102,7 @@ export default function LeaderboardPage() {
   })()
 
   const fmtToPar = (n: number) => n === 0 ? 'E' : n > 0 ? `+${n}` : `${n}`
-  const parColor = (n: number) => n < 0 ? '#2dd4bf' : n > 0 ? '#f87171' : 'var(--text2)'
+  const parColor = (n: number) => n < 0 ? '#1B4332' : n > 0 ? '#7A2E2E' : 'var(--text2)'
 
   if (loading) return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text3)' }}>Cargando leaderboard…</div>
@@ -114,14 +114,14 @@ export default function LeaderboardPage() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       <TopBar />
-      <header style={{ background: 'linear-gradient(135deg, #07212e 0%, #04121a 100%)', borderBottom: '1px solid var(--border)', padding: '18px 16px 14px' }}>
+      <header style={{ background: 'linear-gradient(135deg, #E7EEF2 0%, #E9EFEA 100%)', borderBottom: '1px solid var(--border)', padding: '18px 16px 14px' }}>
         <div style={{ maxWidth: 800, margin: '0 auto' }}>
           <div style={{ fontSize: 10, color: 'var(--text3)', letterSpacing: 2 }}>COMPETENCIA</div>
-          <h1 style={{ fontFamily: 'var(--display)', fontSize: 24, letterSpacing: 1, color: '#38bdf8' }}>{title}</h1>
+          <h1 style={{ fontFamily: 'var(--display)', fontSize: 24, letterSpacing: 1, color: '#2B5F7A' }}>{title}</h1>
           <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 4 }}>
             {r?.date ? new Date(r.date).toLocaleDateString('es-CL', { day: 'numeric', month: 'long' }) : ''}
             {' · '}{groups.length} {groups.length === 1 ? 'grupo' : 'grupos'} · {rows.length} jugadores
-            {updatedAt && <span style={{ marginLeft: 8, color: '#34d399' }}>● en línea</span>}
+            {updatedAt && <span style={{ marginLeft: 8, color: '#2F6B4F' }}>● en línea</span>}
           </div>
         </div>
       </header>
@@ -131,8 +131,8 @@ export default function LeaderboardPage() {
         {([['neto', 'Neto'], ['gross', 'Gross']] as const).map(([k, lbl]) => (
           <button key={k} onClick={() => setTab(k)} style={{
             padding: '10px 16px', background: 'transparent', border: 'none',
-            borderBottom: `2px solid ${tab === k ? '#38bdf8' : 'transparent'}`,
-            color: tab === k ? '#38bdf8' : 'var(--text3)',
+            borderBottom: `2px solid ${tab === k ? '#2B5F7A' : 'transparent'}`,
+            color: tab === k ? '#2B5F7A' : 'var(--text3)',
             fontFamily: 'var(--body)', fontSize: 13, fontWeight: 500, cursor: 'pointer'
           }}>{lbl}</button>
         ))}
@@ -157,10 +157,10 @@ export default function LeaderboardPage() {
                   const pos = row.thru === 0 ? '–' : (i + 1).toString()
                   return (
                     <tr key={row.playerId}>
-                      <td style={{ padding: '10px 10px', border: '1px solid var(--border)', textAlign: 'center', fontFamily: 'var(--display)', fontSize: 17, color: i === 0 && row.thru > 0 ? '#f59e0b' : 'var(--text3)' }}>{pos}</td>
+                      <td style={{ padding: '10px 10px', border: '1px solid var(--border)', textAlign: 'center', fontFamily: 'var(--display)', fontSize: 17, color: i === 0 && row.thru > 0 ? '#B8935A' : 'var(--text3)' }}>{pos}</td>
                       <td style={{ padding: '10px 12px', border: '1px solid var(--border)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <div style={{ width: 24, height: 24, borderRadius: '50%', background: gc, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: '#04121a' }}>{row.name[0]?.toUpperCase()}</div>
+                          <div style={{ width: 24, height: 24, borderRadius: '50%', background: gc, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: '#E9EFEA' }}>{row.name[0]?.toUpperCase()}</div>
                           <div>
                             <div style={{ fontWeight: 500 }}>{row.name}</div>
                             <div style={{ fontSize: 10, color: 'var(--text3)' }}>HCP {row.handicap}</div>
@@ -171,7 +171,7 @@ export default function LeaderboardPage() {
                         <Link href={`/round/${row.roundId}`} style={{ fontSize: 11, fontWeight: 700, color: gc, textDecoration: 'none' }}>G{row.groupIdx + 1}</Link>
                       </td>
                       <td style={{ padding: '10px 10px', border: '1px solid var(--border)', textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>{row.thru || '—'}</td>
-                      <td style={{ padding: '10px 10px', border: '1px solid var(--border)', textAlign: 'center', fontWeight: 700, fontSize: 16, color: tab === 'neto' ? '#2dd4bf' : 'var(--text)' }}>{row.thru ? total : '—'}</td>
+                      <td style={{ padding: '10px 10px', border: '1px solid var(--border)', textAlign: 'center', fontWeight: 700, fontSize: 16, color: tab === 'neto' ? '#1B4332' : 'var(--text)' }}>{row.thru ? total : '—'}</td>
                       <td style={{ padding: '10px 10px', border: '1px solid var(--border)', textAlign: 'center', fontFamily: 'var(--display)', fontSize: 15, color: row.thru ? parColor(toPar) : 'var(--text3)' }}>{row.thru ? fmtToPar(toPar) : '—'}</td>
                     </tr>
                   )

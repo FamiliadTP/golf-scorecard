@@ -20,14 +20,14 @@ const MODE_LABELS: Record<string, string> = {
   stroke_grupal: 'Stroke Play Grupal'
 }
 const MODE_COLORS: Record<string, string> = {
-  stroke: '#2dd4bf',
-  matchplay_individual: '#f59e0b',
-  matchplay_dobles: '#a78bfa',
-  bismarck: '#f87171',
-  combinado_4: '#34d399',
-  combinado_bismarck: '#fb923c',
-  mejor_peor_suma: '#22d3ee',
-  stroke_grupal: '#38bdf8'
+  stroke: '#1B4332',
+  matchplay_individual: '#B8935A',
+  matchplay_dobles: '#6B5B95',
+  bismarck: '#7A2E2E',
+  combinado_4: '#2F6B4F',
+  combinado_bismarck: '#B8703C',
+  mejor_peor_suma: '#2B5F7A',
+  stroke_grupal: '#2B5F7A'
 }
 
 export default function Home() {
@@ -52,7 +52,7 @@ export default function Home() {
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       {/* Header */}
       <header style={{
-        background: 'linear-gradient(135deg, #0a1f0f 0%, #071409 100%)',
+        background: 'linear-gradient(135deg, #EDEAD8 0%, #F1EEE4 100%)',
         borderBottom: '1px solid var(--border)',
         padding: '28px 20px 24px',
         position: 'relative', overflow: 'hidden'
@@ -60,7 +60,7 @@ export default function Home() {
         <div style={{
           position: 'absolute', top: -60, right: -60,
           width: 240, height: 240,
-          background: 'radial-gradient(circle, rgba(45,212,130,0.06) 0%, transparent 70%)',
+          background: 'radial-gradient(circle, rgba(47,107,79,0.08) 0%, transparent 70%)',
           pointerEvents: 'none'
         }} />
         <div style={{ maxWidth: 640, margin: '0 auto' }}>
@@ -68,10 +68,10 @@ export default function Home() {
             <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, minWidth: 0 }}>
               <div style={{
                 width: 44, height: 44,
-                background: 'linear-gradient(135deg, #2dd4bf, #16a34a)',
+                background: 'linear-gradient(135deg, #1B4332, #2F6B4F)',
                 borderRadius: '50%',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 22, boxShadow: '0 0 24px rgba(45,212,130,0.25)', flexShrink: 0
+                fontSize: 22, boxShadow: '0 0 24px rgba(47,107,79,0.15)', flexShrink: 0
               }}>⛳</div>
               <div>
                 <h1 style={{ fontFamily: 'var(--display)', fontSize: 32, letterSpacing: 2, lineHeight: 1 }}>Golf Scorecard</h1>
@@ -84,7 +84,7 @@ export default function Home() {
           <div style={{ display: 'flex', gap: 10, marginTop: 20, flexWrap: 'wrap' }}>
             <Link href="/round/new" style={{
               display: 'inline-flex', alignItems: 'center', gap: 8,
-              background: '#2dd4bf', color: '#071209',
+              background: '#1B4332', color: '#F1EEE4',
               padding: '10px 20px', borderRadius: 8,
               fontWeight: 700, fontSize: 14, letterSpacing: 0.3
             }}>⛳ Nueva Partida</Link>
@@ -157,9 +157,9 @@ export default function Home() {
                       </div>
                       <div style={{
                         padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, letterSpacing: 0.5,
-                        background: `${MODE_COLORS[r.mode] || '#888'}18`,
-                        border: `1px solid ${MODE_COLORS[r.mode] || '#888'}40`,
-                        color: MODE_COLORS[r.mode] || '#888', whiteSpace: 'nowrap', flexShrink: 0
+                        background: `${MODE_COLORS[r.mode] || '#8B9285'}18`,
+                        border: `1px solid ${MODE_COLORS[r.mode] || '#8B9285'}40`,
+                        color: MODE_COLORS[r.mode] || '#8B9285', whiteSpace: 'nowrap', flexShrink: 0
                       }}>
                         {MODE_LABELS[r.mode] || r.mode}
                       </div>

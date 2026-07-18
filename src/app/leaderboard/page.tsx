@@ -51,7 +51,7 @@ export default function LeaderboardIndex() {
           <div style={{ color: 'var(--text3)', padding: 20, textAlign: 'center' }}>Cargando…</div>
         ) : comps.length === 0 ? (
           <div style={{ color: 'var(--text3)', padding: 20, textAlign: 'center', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12 }}>
-            Aún no hay competencias grupales. Crea una partida en modo <strong style={{ color: '#38bdf8' }}>Stroke Play Grupal</strong> con Grupal = Sí.
+            Aún no hay competencias grupales. Crea una partida en modo <strong style={{ color: '#2B5F7A' }}>Stroke Play Grupal</strong> con Grupal = Sí.
           </div>
         ) : comps.map(c => (
           <Link key={c.key} href={`/leaderboard/${c.roundId}`} style={{
@@ -60,7 +60,7 @@ export default function LeaderboardIndex() {
             textDecoration: 'none'
           }}>
             <div>
-              <div style={{ fontFamily: 'var(--display)', fontSize: 18, color: '#38bdf8', letterSpacing: 1 }}>{c.name}</div>
+              <div style={{ fontFamily: 'var(--display)', fontSize: 18, color: '#2B5F7A', letterSpacing: 1 }}>{c.name}</div>
               <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 2 }}>
                 {c.courseName} · {new Date(c.date).toLocaleDateString('es-CL', { day: 'numeric', month: 'long' })} · {c.groups} {c.groups === 1 ? 'grupo' : 'grupos'}
               </div>

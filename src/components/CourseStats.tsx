@@ -14,8 +14,8 @@ const RANGES: { key: Range; label: string; test: (h: number) => boolean }[] = [
 ]
 const dec = (v: number | null, d = 1) => v === null || Number.isNaN(v) ? '—' : (Math.round(v * 10 ** d) / 10 ** d).toLocaleString('es-CL', { minimumFractionDigits: d, maximumFractionDigits: d })
 const fmtDev = (v: number | null) => v === null ? '—' : ((v > 0 ? '+' : v < 0 ? '−' : '') + dec(Math.abs(v)))
-const devColor = (v: number | null) => v === null ? 'var(--text3)' : v > 0.05 ? '#f87171' : v < -0.05 ? '#34d399' : 'var(--text2)'
-const deltaColor = (d: number) => Math.abs(d) <= 2 ? '#34d399' : Math.abs(d) <= 5 ? '#fbbf24' : '#f87171'
+const devColor = (v: number | null) => v === null ? 'var(--text3)' : v > 0.05 ? '#7A2E2E' : v < -0.05 ? '#2F6B4F' : 'var(--text2)'
+const deltaColor = (d: number) => Math.abs(d) <= 2 ? '#2F6B4F' : Math.abs(d) <= 5 ? '#C9A227' : '#7A2E2E'
 
 export default function CourseStats({ courseId, currentRoundId }: { courseId: string; currentRoundId?: string }) {
   const [loading, setLoading] = useState(true)
@@ -134,14 +134,14 @@ export default function CourseStats({ courseId, currentRoundId }: { courseId: st
         {RANGES.map(r => (
           <button key={r.key} onClick={() => setRange(r.key)} style={{
             padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-            border: `1px solid ${range === r.key ? '#2dd4bf' : 'var(--border)'}`,
-            background: range === r.key ? '#2dd4bf' : 'transparent', color: range === r.key ? '#071209' : 'var(--text3)'
+            border: `1px solid ${range === r.key ? '#1B4332' : 'var(--border)'}`,
+            background: range === r.key ? '#1B4332' : 'transparent', color: range === r.key ? '#F1EEE4' : 'var(--text3)'
           }}>{r.label}</button>
         ))}
       </div>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-        {[['bien', stats.bien, '#34d399', 'bien (Δ≤2)'], ['revisar', stats.revisar, '#fbbf24', 'revisar (3‑5)'], ['mal', stats.mal, '#f87171', 'mal (Δ>5)']].map(([k, val, col, lbl]) => (
+        {[['bien', stats.bien, '#2F6B4F', 'bien (Δ≤2)'], ['revisar', stats.revisar, '#C9A227', 'revisar (3‑5)'], ['mal', stats.mal, '#7A2E2E', 'mal (Δ>5)']].map(([k, val, col, lbl]) => (
           <div key={k as string} style={{ flex: 1, minWidth: 90, textAlign: 'center', background: `${col}14`, border: `1px solid ${col}33`, borderRadius: 10, padding: '8px 6px' }}>
             <div style={{ fontFamily: 'var(--display)', fontSize: 22, fontWeight: 700, color: col as string }}>{val as number}</div>
             <div style={{ fontSize: 10, color: 'var(--text3)' }}>{lbl as string}</div>
@@ -153,8 +153,8 @@ export default function CourseStats({ courseId, currentRoundId }: { courseId: st
         <table style={{ borderCollapse: 'collapse', width: '100%' }}>
           <thead><tr>
             <th style={{ ...th, position: 'sticky', left: 0, zIndex: 1 }}>HOYO<br /><span style={{ fontSize: 9 }}>par</span></th>
-            <th style={{ ...th, color: '#fbbf24' }}>VENT.<br /><span style={{ fontSize: 9 }}>actual</span></th>
-            <th style={{ ...th, color: '#2dd4bf' }}>SUG.<br /><span style={{ fontSize: 9 }}>impar/par</span></th>
+            <th style={{ ...th, color: '#C9A227' }}>VENT.<br /><span style={{ fontSize: 9 }}>actual</span></th>
+            <th style={{ ...th, color: '#1B4332' }}>SUG.<br /><span style={{ fontSize: 9 }}>impar/par</span></th>
             <th style={th}>DIF.REAL<br /><span style={{ fontSize: 9 }}>1‑{N}</span></th>
             <th style={th}>GROSS<br /><span style={{ fontSize: 9 }}>vs par</span></th>
             <th style={th}>NETO<br /><span style={{ fontSize: 9 }}>vs par</span></th>
@@ -168,9 +168,9 @@ export default function CourseStats({ courseId, currentRoundId }: { courseId: st
                     <div style={{ fontFamily: 'var(--display)', fontSize: 14, fontWeight: 700, color: 'var(--text2)' }}>{h.hole}</div>
                     <div style={{ fontSize: 10, color: 'var(--text3)' }}>P{h.par}</div>
                   </td>
-                  <td style={{ ...td, background: 'rgba(251,191,36,0.05)' }}><div style={{ fontFamily: 'var(--display)', fontSize: 16, fontWeight: 700, color: '#fbbf24' }}>{h.ventaja}</div></td>
+                  <td style={{ ...td, background: 'rgba(201,162,39,0.08)' }}><div style={{ fontFamily: 'var(--display)', fontSize: 16, fontWeight: 700, color: '#C9A227' }}>{h.ventaja}</div></td>
                   <td style={td}>
-                    <div style={{ fontFamily: 'var(--display)', fontSize: 16, fontWeight: 700, color: '#2dd4bf' }}>{sug || '—'}</div>
+                    <div style={{ fontFamily: 'var(--display)', fontSize: 16, fontWeight: 700, color: '#1B4332' }}>{sug || '—'}</div>
                     {delta !== null && <div style={{ fontSize: 10, fontWeight: 700, color: deltaColor(delta) }}>Δ{delta > 0 ? '+' : delta < 0 ? '−' : ''}{Math.abs(delta)}</div>}
                   </td>
                   <td style={td}><div style={{ fontFamily: 'var(--display)', fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{stats.realRank[h.hole] || '—'}</div></td>
@@ -183,7 +183,7 @@ export default function CourseStats({ courseId, currentRoundId }: { courseId: st
         </table>
       </div>
       <p style={{ fontSize: 11, color: 'var(--text3)', marginTop: 8, lineHeight: 1.6 }}>
-        <strong style={{ color: '#fbbf24' }}>VENT.</strong> actual de la cancha. <strong style={{ color: '#2dd4bf' }}>SUG.</strong> = ventaja sugerida por dificultad gross respetando la regla (impares 1ª vuelta, pares 2ª); <strong>Δ</strong> compara con la actual (<span style={{ color: '#34d399' }}>verde</span> ok, <span style={{ color: '#fbbf24' }}>amarillo</span> revisar, <span style={{ color: '#f87171' }}>rojo</span> mal). <strong>DIF.REAL</strong> = ranking de dificultad sobre los {N} hoyos (1 = más difícil, sin importar la vuelta). Todo recalcula según el rango de HDCP elegido; neto a 100%.
+        <strong style={{ color: '#C9A227' }}>VENT.</strong> actual de la cancha. <strong style={{ color: '#1B4332' }}>SUG.</strong> = ventaja sugerida por dificultad gross respetando la regla (impares 1ª vuelta, pares 2ª); <strong>Δ</strong> compara con la actual (<span style={{ color: '#2F6B4F' }}>verde</span> ok, <span style={{ color: '#C9A227' }}>amarillo</span> revisar, <span style={{ color: '#7A2E2E' }}>rojo</span> mal). <strong>DIF.REAL</strong> = ranking de dificultad sobre los {N} hoyos (1 = más difícil, sin importar la vuelta). Todo recalcula según el rango de HDCP elegido; neto a 100%.
       </p>
 
       {/* Gráfico 1: dispersión SI actual vs dificultad real */}
@@ -207,7 +207,7 @@ export default function CourseStats({ courseId, currentRoundId }: { courseId: st
             const off = Math.abs(h.ventaja - (stats.sug[h.hole] || rr))
             return (
               <g key={h.hole}>
-                <circle cx={sx(h.ventaja)} cy={sy(rr)} r={4} fill={off <= 2 ? '#34d399' : off <= 5 ? '#fbbf24' : '#f87171'} />
+                <circle cx={sx(h.ventaja)} cy={sy(rr)} r={4} fill={off <= 2 ? '#2F6B4F' : off <= 5 ? '#C9A227' : '#7A2E2E'} />
                 <text x={sx(h.ventaja) + 6} y={sy(rr) + 3} fill="var(--text3)" fontSize="8">{h.hole}</text>
               </g>
             )
@@ -215,7 +215,7 @@ export default function CourseStats({ courseId, currentRoundId }: { courseId: st
         </svg>
       </div>
       <p style={{ fontSize: 11, color: 'var(--text3)', marginTop: 6, lineHeight: 1.6 }}>
-        <strong>Cómo leerlo:</strong> cada punto es un hoyo. El eje X es el índice de ventaja que asigna la tarjeta (1 = el más difícil, {N} = el más fácil); el eje Y es la dificultad real según el gross promedio sobre par (abajo = jugó más difícil, arriba = más fácil). La diagonal es el caso ideal (índice asignado = dificultad real). Un punto <strong>encima</strong> de la diagonal jugó más fácil que su índice (índice demasiado bajo); <strong>debajo</strong>, jugó más difícil que su índice (índice demasiado alto). El <strong>color</strong> mide la distancia entre la ventaja actual y la sugerida (<span style={{ color: '#34d399' }}>verde</span> ok, <span style={{ color: '#fbbf24' }}>amarillo</span> revisar, <span style={{ color: '#f87171' }}>rojo</span> mal).
+        <strong>Cómo leerlo:</strong> cada punto es un hoyo. El eje X es el índice de ventaja que asigna la tarjeta (1 = el más difícil, {N} = el más fácil); el eje Y es la dificultad real según el gross promedio sobre par (abajo = jugó más difícil, arriba = más fácil). La diagonal es el caso ideal (índice asignado = dificultad real). Un punto <strong>encima</strong> de la diagonal jugó más fácil que su índice (índice demasiado bajo); <strong>debajo</strong>, jugó más difícil que su índice (índice demasiado alto). El <strong>color</strong> mide la distancia entre la ventaja actual y la sugerida (<span style={{ color: '#2F6B4F' }}>verde</span> ok, <span style={{ color: '#C9A227' }}>amarillo</span> revisar, <span style={{ color: '#7A2E2E' }}>rojo</span> mal).
       </p>
 
       {/* Gráfico 2: discriminación por hoyo */}
@@ -228,7 +228,7 @@ export default function CourseStats({ courseId, currentRoundId }: { courseId: st
             <div key={x.hole} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ width: 34, fontSize: 11, color: 'var(--text3)', textAlign: 'right' }}>H{x.hole}</span>
               <div style={{ flex: 1, height: 14, background: 'var(--surface2)', borderRadius: 4, overflow: 'hidden' }}>
-                <div style={{ width: `${Math.max(2, Math.abs(x.v!) / maxDisc * 100)}%`, height: '100%', background: x.v! >= 0 ? '#2dd4bf' : '#f87171', borderRadius: 4 }} />
+                <div style={{ width: `${Math.max(2, Math.abs(x.v!) / maxDisc * 100)}%`, height: '100%', background: x.v! >= 0 ? '#1B4332' : '#7A2E2E', borderRadius: 4 }} />
               </div>
               <span style={{ width: 38, fontSize: 11, fontWeight: 700, color: 'var(--text2)' }}>{fmtDev(x.v!)}</span>
             </div>
@@ -236,7 +236,7 @@ export default function CourseStats({ courseId, currentRoundId }: { courseId: st
         </div>
       )}
       <p style={{ fontSize: 11, color: 'var(--text3)', marginTop: 8, lineHeight: 1.6 }}>
-        <strong>Cómo leerlo:</strong> cada barra es la diferencia de gross promedio entre HCP altos (&gt;12) y bajos (≤12) en ese hoyo. <span style={{ color: '#2dd4bf' }}>Verde (positiva)</span> = los malos sacan bastante más que los buenos, el hoyo <em>separa</em> niveles y justifica una <strong>ventaja baja</strong> (índice difícil). <span style={{ color: '#f87171' }}>Roja (negativa)</span> = no discrimina, justifica un índice alto. Se calcula con todos los jugadores del campo, sin importar el selector de HDCP.
+        <strong>Cómo leerlo:</strong> cada barra es la diferencia de gross promedio entre HCP altos (&gt;12) y bajos (≤12) en ese hoyo. <span style={{ color: '#1B4332' }}>Verde (positiva)</span> = los malos sacan bastante más que los buenos, el hoyo <em>separa</em> niveles y justifica una <strong>ventaja baja</strong> (índice difícil). <span style={{ color: '#7A2E2E' }}>Roja (negativa)</span> = no discrimina, justifica un índice alto. Se calcula con todos los jugadores del campo, sin importar el selector de HDCP.
       </p>
     </div>
   )

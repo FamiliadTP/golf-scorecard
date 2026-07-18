@@ -7,7 +7,7 @@ import TopBar from '@/components/TopBar'
 import { supabase } from '@/lib/supabase'
 
 const inputStyle = {
-  background: 'rgba(255,255,255,0.04)',
+  background: 'rgba(27,42,26,0.04)',
   border: '1px solid var(--border)',
   borderRadius: 8,
   color: 'var(--text)',
@@ -109,8 +109,8 @@ export default function NewCourse() {
                 <button key={t} onClick={() => setType(t)} style={{
                   padding: '8px 18px', borderRadius: 8,
                   border: '1px solid var(--border)',
-                  background: courseType === t ? '#2dd4bf' : 'transparent',
-                  color: courseType === t ? '#071209' : 'var(--text3)',
+                  background: courseType === t ? '#1B4332' : 'transparent',
+                  color: courseType === t ? '#F1EEE4' : 'var(--text3)',
                   fontWeight: courseType === t ? 700 : 400,
                   fontSize: 14, cursor: 'pointer'
                 }}>{label}</button>
@@ -161,7 +161,7 @@ export default function NewCourse() {
               display: 'grid', gridTemplateColumns: '48px 1fr 1fr',
               padding: '8px 16px', gap: 8,
               borderBottom: i < holes.length - 1 ? '1px solid var(--border)' : 'none',
-              background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)',
+              background: i % 2 === 0 ? 'transparent' : 'rgba(27,42,26,0.02)',
               alignItems: 'center'
             }}>
               <span style={{
@@ -190,8 +190,8 @@ export default function NewCourse() {
           disabled={saving || !name.trim() || (courseType === 'loop' && !loopLabel.trim())}
           style={{
             width: '100%', padding: '14px',
-            background: saving || !name.trim() || (courseType === 'loop' && !loopLabel.trim()) ? 'var(--border)' : '#2dd4bf',
-            color: saving || !name.trim() || (courseType === 'loop' && !loopLabel.trim()) ? 'var(--text3)' : '#071209',
+            background: saving || !name.trim() || (courseType === 'loop' && !loopLabel.trim()) ? 'var(--border)' : '#1B4332',
+            color: saving || !name.trim() || (courseType === 'loop' && !loopLabel.trim()) ? 'var(--text3)' : '#F1EEE4',
             border: 'none', borderRadius: 10,
             fontSize: 16, fontWeight: 700, cursor: saving ? 'wait' : 'pointer',
             fontFamily: 'var(--display)', letterSpacing: 2

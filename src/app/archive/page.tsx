@@ -11,8 +11,8 @@ const MODE_LABELS: Record<string, string> = {
   combinado_4: 'Ryder', combinado_bismarck: 'Bismarck + Individuales'
 }
 const MODE_COLORS: Record<string, string> = {
-  stroke: '#2dd4bf', matchplay_individual: '#f59e0b', matchplay_dobles: '#a78bfa',
-  bismarck: '#f87171', combinado_4: '#34d399', combinado_bismarck: '#fb923c'
+  stroke: '#1B4332', matchplay_individual: '#B8935A', matchplay_dobles: '#6B5B95',
+  bismarck: '#7A2E2E', combinado_4: '#2F6B4F', combinado_bismarck: '#B8703C'
 }
 
 const todayStr = () => {
@@ -83,9 +83,9 @@ export default function ArchivePage() {
                     </div>
                     <div style={{
                       padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, letterSpacing: 0.5,
-                      background: `${MODE_COLORS[r.mode] || '#888'}18`,
-                      border: `1px solid ${MODE_COLORS[r.mode] || '#888'}40`,
-                      color: MODE_COLORS[r.mode] || '#888', whiteSpace: 'nowrap', flexShrink: 0
+                      background: `${MODE_COLORS[r.mode] || '#8B9285'}18`,
+                      border: `1px solid ${MODE_COLORS[r.mode] || '#8B9285'}40`,
+                      color: MODE_COLORS[r.mode] || '#8B9285', whiteSpace: 'nowrap', flexShrink: 0
                     }}>{MODE_LABELS[r.mode] || r.mode}</div>
                   </div>
                 </Link>

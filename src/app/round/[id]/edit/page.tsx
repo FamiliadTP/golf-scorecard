@@ -6,8 +6,8 @@ import Link from 'next/link'
 import TopBar from '@/components/TopBar'
 import { supabase, Course, GameMode, Round, RoundPlayer } from '@/lib/supabase'
 
-const PLAYER_COLORS = ['#2dd4bf', '#f59e0b', '#a78bfa', '#f87171']
-const PLAYER_BG = ['#0d9488', '#d97706', '#7c3aed', '#dc2626']
+const PLAYER_COLORS = ['#1B4332', '#B8935A', '#6B5B95', '#7A2E2E']
+const PLAYER_BG = ['#3D7A5C', '#B8703C', '#6B5B95', '#7A2E2E']
 const HCP_OPTIONS = [0, 75, 80, 100]
 
 const MODE_LABELS: Record<string, string> = {
@@ -17,7 +17,7 @@ const MODE_LABELS: Record<string, string> = {
 }
 
 const inp: React.CSSProperties = {
-  background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)',
+  background: 'rgba(27,42,26,0.04)', border: '1px solid var(--border)',
   borderRadius: 8, color: 'var(--text)', fontFamily: 'var(--body)',
   padding: '10px 12px', fontSize: 14, outline: 'none', width: '100%'
 }
@@ -29,8 +29,8 @@ function HcpPctSelector({ value, onChange }: { value: number; onChange: (v: numb
         <button key={opt} onClick={() => onChange(opt)} style={{
           padding: '6px 14px', borderRadius: 8, cursor: 'pointer', fontSize: 13,
           border: '1px solid var(--border)',
-          background: value === opt ? '#2dd4bf' : 'transparent',
-          color: value === opt ? '#071209' : 'var(--text3)',
+          background: value === opt ? '#1B4332' : 'transparent',
+          color: value === opt ? '#F1EEE4' : 'var(--text3)',
           fontWeight: value === opt ? 700 : 400,
         }}>{opt === 0 ? 'Sin HCP' : `${opt}%`}</button>
       ))}
@@ -47,8 +47,8 @@ function ModeSelector({ value, onChange, label }: { value: 'stroke' | 'matchplay
           <button key={m} onClick={() => onChange(m)} style={{
             padding: '6px 14px', borderRadius: 8, cursor: 'pointer', fontSize: 13,
             border: '1px solid var(--border)',
-            background: value === m ? '#2dd4bf' : 'transparent',
-            color: value === m ? '#071209' : 'var(--text3)',
+            background: value === m ? '#1B4332' : 'transparent',
+            color: value === m ? '#F1EEE4' : 'var(--text3)',
             fontWeight: value === m ? 700 : 400,
           }}>{m === 'stroke' ? 'Stroke Play' : 'Match Play'}</button>
         ))}
@@ -193,7 +193,7 @@ export default function EditRound() {
         <section style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
           <h2 style={{ fontFamily: 'var(--display)', fontSize: 14, letterSpacing: 2, color: 'var(--text3)', marginBottom: 8 }}>MODALIDAD</h2>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#2dd4bf' }} />
+            <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#1B4332' }} />
             <div style={{ fontWeight: 600, fontSize: 15 }}>{MODE_LABELS[mode] || mode}</div>
           </div>
           <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 8 }}>
@@ -207,8 +207,8 @@ export default function EditRound() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <div>
               <label style={{ fontSize: 11, color: 'var(--text3)', letterSpacing: 1, display: 'block', marginBottom: 6 }}>CAMPO</label>
-              <select value={courseId} onChange={e => setCourseId(e.target.value)} style={{ ...inp, color: '#e2f5e9' }}>
-                {courses.map(c => <option key={c.id} value={c.id} style={{ background: '#0f2318', color: '#e2f5e9' }}>{c.name}{c.club ? ` — ${c.club}` : ''}</option>)}
+              <select value={courseId} onChange={e => setCourseId(e.target.value)} style={{ ...inp, color: '#22301F' }}>
+                {courses.map(c => <option key={c.id} value={c.id} style={{ background: '#EDEAD8', color: '#22301F' }}>{c.name}{c.club ? ` — ${c.club}` : ''}</option>)}
               </select>
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
@@ -218,8 +218,8 @@ export default function EditRound() {
                   {[9, 18].map(n => (
                     <button key={n} onClick={() => setHolesPlayed(n)} style={{
                       padding: '8px 20px', borderRadius: 8, border: '1px solid var(--border)',
-                      background: holesPlayed === n ? '#2dd4bf' : 'transparent',
-                      color: holesPlayed === n ? '#071209' : 'var(--text3)',
+                      background: holesPlayed === n ? '#1B4332' : 'transparent',
+                      color: holesPlayed === n ? '#F1EEE4' : 'var(--text3)',
                       fontWeight: 600, fontSize: 14, cursor: 'pointer'
                     }}>{n}</button>
                   ))}
@@ -249,7 +249,7 @@ export default function EditRound() {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {players.map((p, i) => (
-              <div key={p.id} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '10px 14px', borderRadius: 10, background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)' }}>
+              <div key={p.id} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '10px 14px', borderRadius: 10, background: 'rgba(27,42,26,0.03)', border: '1px solid var(--border)' }}>
                 <div style={{ width: 32, height: 32, borderRadius: '50%', background: PLAYER_BG[i], display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 12, color: 'white', flexShrink: 0 }}>
                   {isDoublesMode ? `T${p.team}` : (i + 1)}
                 </div>
@@ -262,8 +262,8 @@ export default function EditRound() {
                 {isDoublesMode && (
                   <select value={p.team} onChange={e => updatePlayer(i, 'team', parseInt(e.target.value))}
                     style={{ ...inp, width: 84, padding: '8px 10px' }}>
-                    <option value={1} style={{ background: '#0f2318' }}>Team 1</option>
-                    <option value={2} style={{ background: '#0f2318' }}>Team 2</option>
+                    <option value={1} style={{ background: '#EDEAD8' }}>Team 1</option>
+                    <option value={2} style={{ background: '#EDEAD8' }}>Team 2</option>
                   </select>
                 )}
               </div>
@@ -281,7 +281,7 @@ export default function EditRound() {
           <h2 style={{ fontFamily: 'var(--display)', fontSize: 14, letterSpacing: 2, color: 'var(--text3)', marginBottom: 14 }}>HANDICAP</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {players.map((p, i) => (
-              <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)' }}>
+              <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(27,42,26,0.03)', border: '1px solid var(--border)' }}>
                 <div style={{ width: 28, height: 28, borderRadius: '50%', background: PLAYER_BG[i], display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 11, color: 'white', flexShrink: 0 }}>
                   {p.name ? p.name[0].toUpperCase() : (i + 1)}
                 </div>
@@ -312,7 +312,7 @@ export default function EditRound() {
         {/* COMPETENCIA GRUPAL */}
         {mode === 'stroke_grupal' && (
           <section style={{ background: 'var(--surface)', border: '1px solid #38bdf830', borderRadius: 12, padding: 20 }}>
-            <h2 style={{ fontFamily: 'var(--display)', fontSize: 14, letterSpacing: 2, color: '#38bdf8', marginBottom: 16 }}>COMPETENCIA GRUPAL</h2>
+            <h2 style={{ fontFamily: 'var(--display)', fontSize: 14, letterSpacing: 2, color: '#2B5F7A', marginBottom: 16 }}>COMPETENCIA GRUPAL</h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
               <div>
@@ -321,8 +321,8 @@ export default function EditRound() {
                   {[{ v: true, l: 'Sí' }, { v: false, l: 'No' }].map(o => (
                     <button key={o.l} onClick={() => setGrupal(o.v)} style={{
                       padding: '8px 22px', borderRadius: 8, border: '1px solid var(--border)',
-                      background: grupal === o.v ? '#38bdf8' : 'transparent',
-                      color: grupal === o.v ? '#04121a' : 'var(--text3)',
+                      background: grupal === o.v ? '#2B5F7A' : 'transparent',
+                      color: grupal === o.v ? '#E9EFEA' : 'var(--text3)',
                       fontWeight: 600, fontSize: 14, cursor: 'pointer'
                     }}>{o.l}</button>
                   ))}
@@ -343,7 +343,7 @@ export default function EditRound() {
                     disabled={lockedName}
                     style={{ ...inp, opacity: lockedName ? 0.7 : 1 }}
                   />
-                  <p style={{ fontSize: 12, color: lockedName ? '#38bdf8' : 'var(--text3)', marginTop: 6, lineHeight: 1.4 }}>
+                  <p style={{ fontSize: 12, color: lockedName ? '#2B5F7A' : 'var(--text3)', marginTop: 6, lineHeight: 1.4 }}>
                     {lockedName
                       ? 'Ya existe una competencia grupal este día en esta cancha. Se hereda su nombre.'
                       : 'Usa el mismo nombre/cancha/fecha en los demás cuartos para que se junten en el leaderboard.'}
@@ -351,8 +351,8 @@ export default function EditRound() {
                 </div>
               )}
 
-              <div style={{ padding: 14, background: 'rgba(245,158,11,0.05)', borderRadius: 10, border: '1px solid #f59e0b20' }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: '#f59e0b', marginBottom: 10 }}>
+              <div style={{ padding: 14, background: 'rgba(184,147,90,0.08)', borderRadius: 10, border: '1px solid #f59e0b20' }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#B8935A', marginBottom: 10 }}>
                   Partidos paralelos (opcional, solo dentro del cuarto/trío)
                 </div>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
@@ -363,8 +363,8 @@ export default function EditRound() {
                   ].filter(o => o.show).map(o => (
                     <button key={o.v} onClick={() => setSideMatch(o.v)} style={{
                       padding: '7px 14px', borderRadius: 8, border: '1px solid var(--border)',
-                      background: sideMatch === o.v ? '#f59e0b' : 'transparent',
-                      color: sideMatch === o.v ? '#1a1000' : 'var(--text3)',
+                      background: sideMatch === o.v ? '#B8935A' : 'transparent',
+                      color: sideMatch === o.v ? '#F6ECDA' : 'var(--text3)',
                       fontWeight: sideMatch === o.v ? 700 : 400, fontSize: 13, cursor: 'pointer'
                     }}>{o.l}</button>
                   ))}
@@ -387,10 +387,10 @@ export default function EditRound() {
         {/* RYDER */}
         {mode === 'combinado_4' && (
           <section style={{ background: 'var(--surface)', border: '1px solid #34d39930', borderRadius: 12, padding: 20 }}>
-            <h2 style={{ fontFamily: 'var(--display)', fontSize: 14, letterSpacing: 2, color: '#34d399', marginBottom: 16 }}>% HANDICAP POR APUESTA</h2>
+            <h2 style={{ fontFamily: 'var(--display)', fontSize: 14, letterSpacing: 2, color: '#2F6B4F', marginBottom: 16 }}>% HANDICAP POR APUESTA</h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <div style={{ padding: 14, background: 'rgba(52,211,153,0.05)', borderRadius: 10, border: '1px solid #34d39920' }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: '#34d399', marginBottom: 10 }}>Dobles (T1 vs T2)</div>
+              <div style={{ padding: 14, background: 'rgba(47,107,79,0.08)', borderRadius: 10, border: '1px solid #34d39920' }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#2F6B4F', marginBottom: 10 }}>Dobles (T1 vs T2)</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <ModeSelector value={doblesMode} onChange={setDoblesMode} label="MODALIDAD DOBLES" />
                   <div>
@@ -399,8 +399,8 @@ export default function EditRound() {
                   </div>
                 </div>
               </div>
-              <div style={{ padding: 14, background: 'rgba(245,158,11,0.05)', borderRadius: 10, border: '1px solid #f59e0b20' }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: '#f59e0b', marginBottom: 10 }}>Individuales (4 partidos cruzados)</div>
+              <div style={{ padding: 14, background: 'rgba(184,147,90,0.08)', borderRadius: 10, border: '1px solid #f59e0b20' }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#B8935A', marginBottom: 10 }}>Individuales (4 partidos cruzados)</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <ModeSelector value={individualMode} onChange={setIndividualMode} label="MODALIDAD INDIVIDUALES" />
                   <div>
@@ -416,17 +416,17 @@ export default function EditRound() {
         {/* COMBINADO BISMARCK */}
         {mode === 'combinado_bismarck' && (
           <section style={{ background: 'var(--surface)', border: '1px solid #fb923c30', borderRadius: 12, padding: 20 }}>
-            <h2 style={{ fontFamily: 'var(--display)', fontSize: 14, letterSpacing: 2, color: '#fb923c', marginBottom: 16 }}>% HANDICAP POR APUESTA</h2>
+            <h2 style={{ fontFamily: 'var(--display)', fontSize: 14, letterSpacing: 2, color: '#B8703C', marginBottom: 16 }}>% HANDICAP POR APUESTA</h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <div style={{ padding: 14, background: 'rgba(248,113,113,0.05)', borderRadius: 10, border: '1px solid #f8717120' }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: '#f87171', marginBottom: 10 }}>Bismarck</div>
+              <div style={{ padding: 14, background: 'rgba(122,46,46,0.05)', borderRadius: 10, border: '1px solid #f8717120' }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#7A2E2E', marginBottom: 10 }}>Bismarck</div>
                 <div>
                   <div style={{ fontSize: 11, color: 'var(--text3)', letterSpacing: 1, marginBottom: 6 }}>% HANDICAP BISMARCK</div>
                   <HcpPctSelector value={bismarckHcpPct} onChange={setBismarckHcpPct} />
                 </div>
               </div>
-              <div style={{ padding: 14, background: 'rgba(245,158,11,0.05)', borderRadius: 10, border: '1px solid #f59e0b20' }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: '#f59e0b', marginBottom: 10 }}>Individuales (3 partidos cruzados)</div>
+              <div style={{ padding: 14, background: 'rgba(184,147,90,0.08)', borderRadius: 10, border: '1px solid #f59e0b20' }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#B8935A', marginBottom: 10 }}>Individuales (3 partidos cruzados)</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <ModeSelector value={individualMode} onChange={setIndividualMode} label="MODALIDAD INDIVIDUALES" />
                   <div>
@@ -449,8 +449,8 @@ export default function EditRound() {
           }}>CANCELAR</Link>
           <button onClick={handleSave} disabled={!isValid() || saving} style={{
             flex: 2, padding: 16,
-            background: !isValid() || saving ? 'var(--border)' : '#2dd4bf',
-            color: !isValid() || saving ? 'var(--text3)' : '#071209',
+            background: !isValid() || saving ? 'var(--border)' : '#1B4332',
+            color: !isValid() || saving ? 'var(--text3)' : '#F1EEE4',
             border: 'none', borderRadius: 12,
             fontFamily: 'var(--display)', fontSize: 16, letterSpacing: 2,
             cursor: !isValid() || saving ? 'not-allowed' : 'pointer'
