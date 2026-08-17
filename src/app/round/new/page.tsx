@@ -99,9 +99,11 @@ export default function NewRound() {
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    supabase.from('courses').select('*, holes(*)').order('name').then(({ data: c }) => {
-      setCourses((c || []) as any)
-      if (c && c.length > 0) { setCourseId(c[0].id); setHolesPlayed((c[0] as any).holes_count || 18) }
+    supabase.from('courses').select('*, holes(*)').then(({ data: c }) => {
+      const sorted = [...(c || [])].sort((a: any, b: any) =>
+        (a.club || a.name).localeCompare(b.club || b.name, 'es'))
+      setCourses(sorted as any)
+      if (sorted.length > 0) { setCourseId(sorted[0].id); setHolesPlayed((sorted[0] as any).holes_count || 18) }
     })
   }, [])
 
@@ -112,8 +114,10 @@ export default function NewRound() {
   const selectedCourse: any = courses.find(c => c.id === courseId)
   const isNineType = selectedCourse?.holes_count === 9
   const nineCourses: any[] = courses.filter((c: any) => c.holes_count === 9)
+  // En el selector se muestra el nombre corto (el que va después del guión, es
+  // decir el club); si no hay club definido, se usa el nombre del campo.
   const courseLabel = (c: any) =>
-    `${c.name}${c.loop_label ? ` · ${c.loop_label}` : ''}${c.club ? ` — ${c.club}` : ''}`
+    `${c.club || c.name}${c.loop_label ? ` · ${c.loop_label}` : ''}`
 
   // Ajusta vueltas / segunda vuelta según el tipo de campo seleccionado.
   useEffect(() => {
