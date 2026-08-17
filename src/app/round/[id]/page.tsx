@@ -25,21 +25,38 @@ const MODE_LABELS: Record<string, string> = {
 // Modes that use handicap (show Score Neto tab)
 const MODES_WITH_HCP = ['stroke', 'matchplay_individual', 'matchplay_dobles', 'bismarck', 'combinado_4', 'combinado_bismarck', 'stroke_grupal']
 
-function ScoreBadge({ strokes, par }: { strokes: number | null; par: number }) {
+// extra: palos de ventaja recibidos en ese hoyo (opcional). Cuando > 0 se muestra
+// un círculo superpuesto con el número de palos, sin alterar el score mostrado
+// (el ajuste real solo ocurre en la vista Neto).
+function ScoreBadge({ strokes, par, extra }: { strokes: number | null; par: number; extra?: number }) {
   if (!strokes) return <span style={{ color: 'var(--text3)', fontSize: 13 }}>—</span>
   const d = strokes - par
-  const styles: Record<string, React.CSSProperties> = {
-    eagle: { background: '#C9A227', color: '#F6ECDA', borderRadius: '50%' },
-    birdie: { background: '#1B4332', color: '#F1EEE4', borderRadius: 4 },
-    par: { background: 'var(--surface2)', color: 'var(--text)', border: '1px solid var(--border2)', borderRadius: 4 },
+  const isAce = strokes === 1
+
+  type K = 'ace' | 'eagle' | 'birdie' | 'par' | 'bogey' | 'doble' | 'peor'
+  const styles: Record<K, React.CSSProperties> = {
+    ace: { background: '#C9A227', color: '#F6ECDA', borderRadius: '50%', border: 'none' },
+    eagle: { background: '#F5D54A', color: '#5C4300', borderRadius: '50%', border: 'none' },
+    birdie: { background: '#1B4332', color: '#F1EEE4', borderRadius: 4, border: 'none' },
+    par: { background: '#FFFFFF', color: 'var(--text)', border: '1px solid var(--border2)', borderRadius: 4 },
     bogey: { background: 'rgba(122,46,46,0.1)', color: '#7A2E2E', border: '1px solid rgba(122,46,46,0.18)', borderRadius: 4 },
-    double: { background: 'rgba(122,46,46,0.18)', color: '#9C4A44', border: '2px solid #7A2E2E', borderRadius: 4 },
-    triple: { background: '#F3E2E0', color: '#9C4A44', borderRadius: 4 },
+    doble: { background: 'rgba(122,46,46,0.18)', color: '#9C4A44', border: '1px solid #7A2E2E', borderRadius: 4 },
+    peor: { background: '#F3E2E0', color: '#7A2E2E', border: '1px solid #7A2E2E', borderRadius: 4 },
   }
-  const k = d <= -2 ? 'eagle' : d === -1 ? 'birdie' : d === 0 ? 'par' : d === 1 ? 'bogey' : d === 2 ? 'double' : 'triple'
+  const k: K = isAce ? 'ace' : d <= -2 ? 'eagle' : d === -1 ? 'birdie' : d === 0 ? 'par' : d === 1 ? 'bogey' : d === 2 ? 'doble' : 'peor'
+  const doublePerimeter = k === 'peor' // +3 o peor sobre par, cualquiera sea la magnitud
+
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 26, height: 26, fontSize: 12, fontWeight: 700, ...styles[k] }}>
-      {strokes}
+    <span style={{ position: 'relative', display: 'inline-flex', width: 26, height: 26 }}>
+      {doublePerimeter && (
+        <span style={{ position: 'absolute', inset: -4, border: '1.5px solid #7A2E2E', borderRadius: 6, pointerEvents: 'none' }} />
+      )}
+      <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 26, height: 26, fontSize: 12, fontWeight: 700, boxSizing: 'border-box', ...styles[k] }}>
+        {strokes}
+      </span>
+      {!!extra && extra > 0 && (
+        <span style={{ position: 'absolute', top: -5, right: -5, width: 10, height: 10, background: '#1B4332', borderRadius: '50%', fontSize: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#F1EEE4', fontWeight: 900, zIndex: 3 }}>{extra}</span>
+      )}
     </span>
   )
 }
@@ -169,6 +186,16 @@ export default function RoundPage() {
     load()
   }, [id])
 
+  // Al abrir la tarjeta, llevar la vista (scroll horizontal + vertical) hasta la
+  // columna del hoyo de salida, para que quien anota parta directamente ahí.
+  useEffect(() => {
+    if (loading || activeTab !== 'card') return
+    const t = setTimeout(() => {
+      document.getElementById('start-hole-col')?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
+    }, 150)
+    return () => clearTimeout(t)
+  }, [loading, activeTab])
+
   const getScore = useCallback((playerId: string, hole: number) =>
     scores.find(s => s.player_id === playerId && s.hole_number === hole)?.strokes ?? null, [scores])
 
@@ -238,6 +265,17 @@ export default function RoundPage() {
 
   const front9 = holes.slice(0, 9)
   const back9 = holes.length > 9 ? holes.slice(9) : []
+  const startHole = (r as any).start_hole ?? 1
+
+  // Estrategia de ventaja a mostrar en la vista Gross (círculo con palos recibidos,
+  // sin ajustar el score). Solo se muestra para modos con un único % de handicap;
+  // Ryder y Bismarck+Individuales tienen varias apuestas con % distintos, así que
+  // su indicación de ventaja vive solo en sus tablas Neto respectivas.
+  const grossHcpStrategy: 'individual' | 'relative' | null =
+    r.mode === 'stroke' || r.mode === 'stroke_grupal' ? 'individual'
+    : ['matchplay_individual', 'matchplay_dobles', 'bismarck', 'mejor_peor_suma'].includes(r.mode) ? 'relative'
+    : null
+  const allHcpsGross = players.map(p => p.handicap)
 
   // Puntos Ryder: dobles vale 2, cada individual 1 (6 en total). Empate parte el valor.
   const ryderPoints = (() => {
@@ -304,7 +342,7 @@ export default function RoundPage() {
                 <span style={{ fontSize: 14, color: 'var(--text3)', display: 'block', marginTop: 4, letterSpacing: 0 }}>{course.loop_label}</span>
               ) : null)}</h1>
               <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>
-                {new Date(r.date).toLocaleDateString('es-CL', { day: 'numeric', month: 'long' })} · {holes.length} hoyos · {MODE_LABELS[r.mode]}
+                {new Date(r.date).toLocaleDateString('es-CL', { day: 'numeric', month: 'long' })} · {holes.length} hoyos · {MODE_LABELS[r.mode]}{startHole !== 1 ? ` · Salida hoyo ${startHole}` : ''}
               </div>
             </div>
             {saving && <div style={{ marginLeft: 'auto', fontSize: 11, color: '#1B4332' }}>💾</div>}
@@ -376,12 +414,21 @@ export default function RoundPage() {
                     <thead>
                       <tr>
                         <th style={{ textAlign: 'left', padding: '8px 10px', fontSize: 11, color: 'var(--text3)', letterSpacing: 1, background: 'var(--surface2)', border: '1px solid var(--border)', minWidth: 100 }}>JUGADOR</th>
-                        {holeSet.map(h => (
-                          <th key={h.hole_number} style={{ width: 42, padding: '6px 4px', fontSize: 12, color: 'var(--text3)', background: 'var(--surface2)', border: '1px solid var(--border)' }}>
+                        {holeSet.map(h => {
+                          const isStart = h.hole_number === startHole
+                          return (
+                          <th key={h.hole_number} id={isStart ? 'start-hole-col' : undefined} style={{
+                            width: 42, padding: '6px 4px', fontSize: 12, color: 'var(--text3)',
+                            background: isStart ? 'rgba(184,147,90,0.16)' : 'var(--surface2)',
+                            border: isStart ? '1px solid #B8935A' : '1px solid var(--border)',
+                            borderBottom: isStart ? '3px solid #B8935A' : undefined,
+                          }}>
                             <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text2)' }}>{h.hole_number}</div>
                             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text3)' }}>P{h.par}</div><div style={{ fontSize: 11, fontWeight: 700, color: '#1B4332' }}>V{h.handicap}</div>
+                            {isStart && <div style={{ fontSize: 9, fontWeight: 700, color: '#B8935A', letterSpacing: 0.5, marginTop: 1 }}>SALIDA</div>}
                           </th>
-                        ))}
+                          )
+                        })}
                         <th style={{ width: 52, padding: '6px 8px', fontSize: 11, color: '#1B4332', background: 'var(--surface2)', border: '1px solid var(--border)' }}>
                           {setLabel}
                         </th>
@@ -406,11 +453,16 @@ export default function RoundPage() {
                             </td>
                             {holeSet.map(h => {
                               const s = getScore(p.id, h.hole_number)
+                              const extra = grossHcpStrategy === 'individual'
+                                ? getExtraStrokes(h.handicap, p.handicap, holes.length, hcpPct)
+                                : grossHcpStrategy === 'relative'
+                                ? getRelativeExtra(h.handicap, p.handicap, allHcpsGross, holes.length, hcpPct)
+                                : 0
                               return (
                                 <td key={h.hole_number} style={{ padding: 3, border: '1px solid var(--border)', background: 'var(--surface)', textAlign: 'center' }}>
                                   <div style={{ position: 'relative', width: 34, margin: '0 auto' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 30 }}>
-                                      <ScoreBadge strokes={s} par={h.par} />
+                                      <ScoreBadge strokes={s} par={h.par} extra={extra} />
                                     </div>
                                     <input type="number" min="1" max="15" value={s || ''} onChange={e => handleScoreChange(p.id, h.hole_number, e.target.value)}
                                       style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: 'transparent', border: 'none', color: 'transparent', textAlign: 'center', fontSize: 13, cursor: 'pointer', outline: 'none', zIndex: 2, MozAppearance: 'textfield' as any }} />
@@ -437,15 +489,29 @@ export default function RoundPage() {
             })}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, paddingTop: 8 }}>
               {[
-                { label: 'Eagle', bg: '#C9A227', r: '50%' }, { label: 'Birdie', bg: '#1B4332', r: 4 },
-                { label: 'Par', bg: 'var(--surface2)', border: '1px solid var(--border2)' },
+                { label: 'Hoyo en 1', bg: '#C9A227', r: '50%' },
+                { label: 'Eagle o mejor', bg: '#F5D54A', r: '50%' },
+                { label: 'Birdie', bg: '#1B4332', r: 4 },
+                { label: 'Par', bg: '#FFFFFF', border: '1px solid var(--border2)' },
                 { label: 'Bogey', bg: 'rgba(122,46,46,0.1)', border: '1px solid rgba(122,46,46,0.18)' },
+                { label: 'Doble bogey', bg: 'rgba(122,46,46,0.18)', border: '1px solid #7A2E2E' },
+                { label: '+3 o peor', bg: '#F3E2E0', border: '1px solid #7A2E2E', double: true },
               ].map((l: any) => (
                 <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'var(--text3)' }}>
-                  <div style={{ width: 14, height: 14, background: l.bg, borderRadius: l.r || 3, border: l.border }} />
+                  <span style={{ position: 'relative', width: 14, height: 14, display: 'inline-flex' }}>
+                    {l.double && <span style={{ position: 'absolute', inset: -3, border: '1.5px solid #7A2E2E', borderRadius: 5 }} />}
+                    <span style={{ width: 14, height: 14, background: l.bg, borderRadius: l.r || 3, border: l.border }} />
+                  </span>
                   {l.label}
                 </div>
               ))}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'var(--text3)' }}>
+                <span style={{ position: 'relative', width: 14, height: 14, display: 'inline-flex' }}>
+                  <span style={{ width: 14, height: 14, background: 'var(--surface2)', borderRadius: 3, border: '1px solid var(--border)' }} />
+                  <span style={{ position: 'absolute', top: -3, right: -3, width: 8, height: 8, background: '#1B4332', borderRadius: '50%' }} />
+                </span>
+                Recibe palo(s) de ventaja
+              </div>
             </div>
           </>
         )}

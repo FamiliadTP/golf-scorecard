@@ -44,6 +44,7 @@ export interface Round {
   second_course_id?: string | null
   mode: GameMode
   holes_played: number
+  start_hole?: number
   date: string
   hcp_pct?: number
   dobles_mode?: 'stroke' | 'matchplay'
