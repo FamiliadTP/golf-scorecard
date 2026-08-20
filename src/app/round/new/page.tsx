@@ -6,6 +6,13 @@ import Link from 'next/link'
 import TopBar from '@/components/TopBar'
 import { supabase, Course, GameMode, Player } from '@/lib/supabase'
 
+// Fecha local del dispositivo (no UTC): toISOString() convierte a UTC y puede
+// saltar al día siguiente en la noche para husos horarios negativos como Chile.
+const todayLocalStr = () => {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 const MODES: { value: GameMode; label: string; desc: string; color: string; players: string; counts: number[] }[] = [
   { value: 'combinado_4', label: 'Ryder', desc: 'Dobles + 4 individuales cruzados', color: '#2F6B4F', players: '4 jugadores', counts: [4] },
   { value: 'stroke', label: 'Stroke Play', desc: 'Stableford con handicap', color: '#1B4332', players: '1–4 jugadores', counts: [1, 2, 3, 4] },
@@ -81,7 +88,8 @@ export default function NewRound() {
   const [holesPlayed, setHolesPlayed] = useState(18)
   const [startHole, setStartHole] = useState(1)
   const [groupName, setGroupName] = useState('')
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0])
+  const [groupNameTouched, setGroupNameTouched] = useState(false)
+  const [date, setDate] = useState(todayLocalStr())
   const [players, setPlayers] = useState([
     { name: '', handicap: 18, team: 1 },
     { name: '', handicap: 18, team: 2 },
@@ -221,6 +229,14 @@ export default function NewRound() {
     if (startHole > holesPlayed) setStartHole(1)
   }, [holesPlayed, startHole])
 
+  // Nombre del grupo automático a partir de los nombres de los jugadores
+  // (ej. "Carlos, Luis, Esteban"), a menos que el usuario lo edite a mano.
+  useEffect(() => {
+    if (groupNameTouched) return
+    const firstNames = players.map(p => p.name.trim().split(/\s+/)[0]).filter(Boolean)
+    setGroupName(firstNames.join(', '))
+  }, [players, groupNameTouched])
+
   const updatePlayer = (i: number, field: string, val: any) =>
     setPlayers(prev => prev.map((p, idx) => idx === i ? { ...p, [field]: val } : p))
 
@@ -359,15 +375,6 @@ export default function NewRound() {
               </div>
 
               <div>
-                <label style={{ fontSize: 11, color: 'var(--text3)', letterSpacing: 1, display: 'block', marginBottom: 6 }}>NOMBRE DEL GRUPO (opcional)</label>
-                <input type="text" value={groupName} onChange={e => setGroupName(e.target.value)} placeholder="Ej: Cuarteto de Pedro, Grupo 2…" maxLength={40} style={inp} />
-                <p style={{ fontSize: 12, color: 'var(--text3)', marginTop: 6, lineHeight: 1.4 }}>
-                  Útil cuando varios grupos juegan el mismo día en el mismo campo,
-                  para identificar cada partida en el listado.
-                </p>
-              </div>
-
-              <div>
                 <label style={{ fontSize: 11, color: 'var(--text3)', letterSpacing: 1, display: 'block', marginBottom: 6 }}>HOYO DE SALIDA</label>
                 <select value={startHole} onChange={e => setStartHole(parseInt(e.target.value))} style={{ ...inp, color: '#22301F', maxWidth: 140 }}>
                   {Array.from({ length: holesPlayed }, (_, i) => i + 1).map(n => (
@@ -464,6 +471,17 @@ export default function NewRound() {
               </div>
               )
             })}
+          </div>
+
+          <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
+            <label style={{ fontSize: 11, color: 'var(--text3)', letterSpacing: 1, display: 'block', marginBottom: 6 }}>NOMBRE DEL GRUPO (opcional)</label>
+            <input type="text" value={groupName}
+              onChange={e => { setGroupName(e.target.value); setGroupNameTouched(true) }}
+              placeholder="Se completa solo con los nombres de los jugadores" maxLength={60} style={inp} />
+            <p style={{ fontSize: 12, color: 'var(--text3)', marginTop: 6, lineHeight: 1.4 }}>
+              Se arma automáticamente con los nombres de los jugadores. Útil cuando
+              varios grupos juegan el mismo día en el mismo campo. Puedes editarlo.
+            </p>
           </div>
         </section>
 
