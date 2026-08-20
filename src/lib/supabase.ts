@@ -45,6 +45,7 @@ export interface Round {
   mode: GameMode
   holes_played: number
   start_hole?: number
+  group_name?: string | null
   date: string
   hcp_pct?: number
   dobles_mode?: 'stroke' | 'matchplay'

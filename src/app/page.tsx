@@ -146,10 +146,14 @@ export default function Home() {
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
                       <div>
-                        <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 4 }}>
-                          {r.course?.name || 'Campo desconocido'}
-                          {r.course?.club && <span style={{ color: 'var(--text3)', fontWeight: 400, fontSize: 13 }}> — {r.course.club}</span>}
+                        <div style={{ fontWeight: 600, fontSize: 15, marginBottom: (r as any).group_name ? 1 : 4 }}>
+                          {(r as any).group_name || r.course?.club || r.course?.name || 'Campo desconocido'}
                         </div>
+                        {(r as any).group_name && (
+                          <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 3 }}>
+                            {r.course?.club || r.course?.name || 'Campo desconocido'}
+                          </div>
+                        )}
                         <div style={{ fontSize: 12, color: 'var(--text3)' }}>
                           {new Date(r.date).toLocaleDateString('es-CL', { day: 'numeric', month: 'long', year: 'numeric' })}
                           {' · '}{r.holes_played} hoyos

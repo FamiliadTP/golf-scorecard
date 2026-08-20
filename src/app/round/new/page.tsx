@@ -80,6 +80,7 @@ export default function NewRound() {
   const [mode, setMode] = useState<GameMode>('combinado_4')
   const [holesPlayed, setHolesPlayed] = useState(18)
   const [startHole, setStartHole] = useState(1)
+  const [groupName, setGroupName] = useState('')
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
   const [players, setPlayers] = useState([
     { name: '', handicap: 18, team: 1 },
@@ -253,7 +254,7 @@ export default function NewRound() {
   const handleStart = async () => {
     if (!isValid() || saving) return
     setSaving(true)
-    const roundData: any = { course_id: courseId, second_course_id: playTwoLoops ? secondCourseId : null, mode, holes_played: holesPlayed, start_hole: startHole, date }
+    const roundData: any = { course_id: courseId, second_course_id: playTwoLoops ? secondCourseId : null, mode, holes_played: holesPlayed, start_hole: startHole, group_name: groupName.trim() || null, date }
     if (['stroke', 'matchplay_individual', 'matchplay_dobles', 'bismarck', 'mejor_peor_suma', 'stroke_grupal'].includes(mode)) roundData.hcp_pct = hcpPct
     if (mode === 'stroke_grupal') {
       roundData.grupal = grupal
@@ -355,6 +356,15 @@ export default function NewRound() {
                   <label style={{ fontSize: 11, color: 'var(--text3)', letterSpacing: 1, display: 'block', marginBottom: 6 }}>FECHA</label>
                   <input type="date" value={date} onChange={e => setDate(e.target.value)} style={inp} />
                 </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: 11, color: 'var(--text3)', letterSpacing: 1, display: 'block', marginBottom: 6 }}>NOMBRE DEL GRUPO (opcional)</label>
+                <input type="text" value={groupName} onChange={e => setGroupName(e.target.value)} placeholder="Ej: Cuarteto de Pedro, Grupo 2…" maxLength={40} style={inp} />
+                <p style={{ fontSize: 12, color: 'var(--text3)', marginTop: 6, lineHeight: 1.4 }}>
+                  Útil cuando varios grupos juegan el mismo día en el mismo campo,
+                  para identificar cada partida en el listado.
+                </p>
               </div>
 
               <div>

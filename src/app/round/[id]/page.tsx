@@ -29,7 +29,16 @@ const MODES_WITH_HCP = ['stroke', 'matchplay_individual', 'matchplay_dobles', 'b
 // un círculo superpuesto con el número de palos, sin alterar el score mostrado
 // (el ajuste real solo ocurre en la vista Neto).
 function ScoreBadge({ strokes, par, extra }: { strokes: number | null; par: number; extra?: number }) {
-  if (!strokes) return <span style={{ color: 'var(--text3)', fontSize: 13 }}>—</span>
+  if (!strokes) {
+    return (
+      <span style={{ position: 'relative', display: 'inline-flex', width: 26, height: 26, alignItems: 'center', justifyContent: 'center' }}>
+        <span style={{ color: 'var(--text3)', fontSize: 13 }}>—</span>
+        {!!extra && extra > 0 && (
+          <span style={{ position: 'absolute', top: -5, right: -5, width: 10, height: 10, background: '#1B4332', borderRadius: '50%', fontSize: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#F1EEE4', fontWeight: 900, zIndex: 3 }}>{extra}</span>
+        )}
+      </span>
+    )
+  }
   const d = strokes - par
   const isAce = strokes === 1
 
@@ -334,13 +343,16 @@ export default function RoundPage() {
         <div style={{ maxWidth: 800, margin: '0 auto' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
             <div>
-              <h1 style={{ fontFamily: 'var(--display)', fontSize: 22, letterSpacing: 1, lineHeight: 1 }}>{course?.name}{secondCourse ? (
+              <h1 style={{ fontFamily: 'var(--display)', fontSize: 22, letterSpacing: 1, lineHeight: 1 }}>{(r as any).group_name || course?.club || course?.name}{secondCourse ? (
                 <span style={{ fontSize: 14, color: 'var(--text3)', display: 'block', marginTop: 4, letterSpacing: 0 }}>
                   {course?.loop_label || 'Vuelta 1'} + {secondCourse?.loop_label || 'Vuelta 2'}
                 </span>
               ) : (course?.loop_label ? (
                 <span style={{ fontSize: 14, color: 'var(--text3)', display: 'block', marginTop: 4, letterSpacing: 0 }}>{course.loop_label}</span>
               ) : null)}</h1>
+              {(r as any).group_name && (
+                <div style={{ fontSize: 13, color: 'var(--text3)', marginTop: 2 }}>{course?.club || course?.name || 'Campo desconocido'}</div>
+              )}
               <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>
                 {new Date(r.date).toLocaleDateString('es-CL', { day: 'numeric', month: 'long' })} · {holes.length} hoyos · {MODE_LABELS[r.mode]}{startHole !== 1 ? ` · Salida hoyo ${startHole}` : ''}
               </div>
@@ -714,7 +726,10 @@ export default function RoundPage() {
                                             {extra > 0 && <span style={{ position: 'absolute', top: -4, right: -4, width: 10, height: 10, background: '#1B4332', borderRadius: '50%', fontSize: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#F1EEE4', fontWeight: 900 }}>{extra}</span>}
                                           </div>
                                         ) : (
-                                          <span style={{ color: 'var(--text3)', fontSize: 13 }}>—</span>
+                                          <span style={{ position: 'relative', display: 'inline-flex', width: 26, height: 26, alignItems: 'center', justifyContent: 'center' }}>
+                                            <span style={{ color: 'var(--text3)', fontSize: 13 }}>—</span>
+                                            {extra > 0 && <span style={{ position: 'absolute', top: -5, right: -5, width: 10, height: 10, background: '#1B4332', borderRadius: '50%', fontSize: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#F1EEE4', fontWeight: 900 }}>{extra}</span>}
+                                          </span>
                                         )}
                                       </td>
                                     )
