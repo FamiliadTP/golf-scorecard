@@ -4,6 +4,11 @@ import './globals.css'
 export const metadata: Metadata = {
   title: 'Golf Scorecard',
   description: 'Tarjeta de golf con múltiples modalidades',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'Golf Scorecard',
+  },
 }
 
 export const viewport: Viewport = {
