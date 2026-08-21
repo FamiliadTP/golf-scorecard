@@ -119,7 +119,7 @@ export default function LeaderboardPage() {
           <div style={{ fontSize: 10, color: 'var(--text3)', letterSpacing: 2 }}>COMPETENCIA</div>
           <h1 style={{ fontFamily: 'var(--display)', fontSize: 24, letterSpacing: 1, color: '#2B5F7A' }}>{title}</h1>
           <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 4 }}>
-            {r?.date ? new Date(r.date).toLocaleDateString('es-CL', { day: 'numeric', month: 'long' }) : ''}
+            {r?.date ? new Date(r.date + 'T00:00:00').toLocaleDateString('es-CL', { day: 'numeric', month: 'long' }) : ''}
             {' · '}{groups.length} {groups.length === 1 ? 'grupo' : 'grupos'} · {rows.length} jugadores
             {updatedAt && <span style={{ marginLeft: 8, color: '#2F6B4F' }}>● en línea</span>}
           </div>

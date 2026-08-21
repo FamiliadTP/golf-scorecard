@@ -354,7 +354,7 @@ export default function RoundPage() {
                 <div style={{ fontSize: 13, color: 'var(--text3)', marginTop: 2 }}>{course?.club || course?.name || 'Campo desconocido'}</div>
               )}
               <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>
-                {new Date(r.date).toLocaleDateString('es-CL', { day: 'numeric', month: 'long' })} · {holes.length} hoyos · {MODE_LABELS[r.mode]}{startHole !== 1 ? ` · Salida hoyo ${startHole}` : ''}
+                {new Date(r.date + 'T00:00:00').toLocaleDateString('es-CL', { day: 'numeric', month: 'long' })} · {holes.length} hoyos · {MODE_LABELS[r.mode]}{startHole !== 1 ? ` · Salida hoyo ${startHole}` : ''}
               </div>
             </div>
             {saving && <div style={{ marginLeft: 'auto', fontSize: 11, color: '#1B4332' }}>💾</div>}

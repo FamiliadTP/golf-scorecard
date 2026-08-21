@@ -62,7 +62,7 @@ export default function LeaderboardIndex() {
             <div>
               <div style={{ fontFamily: 'var(--display)', fontSize: 18, color: '#2B5F7A', letterSpacing: 1 }}>{c.name}</div>
               <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 2 }}>
-                {c.courseName} · {new Date(c.date).toLocaleDateString('es-CL', { day: 'numeric', month: 'long' })} · {c.groups} {c.groups === 1 ? 'grupo' : 'grupos'}
+                {c.courseName} · {new Date(c.date + 'T00:00:00').toLocaleDateString('es-CL', { day: 'numeric', month: 'long' })} · {c.groups} {c.groups === 1 ? 'grupo' : 'grupos'}
               </div>
             </div>
             <span style={{ fontSize: 20 }}>🏆</span>

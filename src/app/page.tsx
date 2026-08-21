@@ -1,4 +1,5 @@
 'use client'
+export const dynamic = 'force-dynamic'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { supabase, Round, Course } from '@/lib/supabase'
@@ -155,7 +156,7 @@ export default function Home() {
                           </div>
                         )}
                         <div style={{ fontSize: 12, color: 'var(--text3)' }}>
-                          {new Date(r.date).toLocaleDateString('es-CL', { day: 'numeric', month: 'long', year: 'numeric' })}
+                          {new Date(r.date + 'T00:00:00').toLocaleDateString('es-CL', { day: 'numeric', month: 'long', year: 'numeric' })}
                           {' · '}{r.holes_played} hoyos
                         </div>
                       </div>
