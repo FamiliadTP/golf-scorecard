@@ -112,7 +112,7 @@ export default function NewRound() {
       const sorted = [...(c || [])].sort((a: any, b: any) =>
         (a.club || a.name).localeCompare(b.club || b.name, 'es'))
       setCourses(sorted as any)
-      if (sorted.length > 0) { setCourseId(sorted[0].id); setHolesPlayed((sorted[0] as any).holes_count || 18) }
+      // No se preselecciona ningún campo: el jugador debe elegirlo explícitamente.
     })
   }, [])
 
@@ -316,6 +316,7 @@ export default function NewRound() {
               <div>
                 <label style={{ fontSize: 11, color: 'var(--text3)', letterSpacing: 1, display: 'block', marginBottom: 6 }}>CAMPO</label>
                 <select value={courseId} onChange={e => { setCourseId(e.target.value); const c = courses.find(c => c.id === e.target.value); if (c) setHolesPlayed((c as any).holes_count || 18) }} style={{ ...inp, color: '#22301F' }}>
+                  <option value="" disabled style={{ background: '#EDEAD8', color: '#8B9285' }}>Selecciona un campo…</option>
                   {courses.map(c => <option key={c.id} value={c.id} style={{ background: '#EDEAD8', color: '#22301F' }}>{courseLabel(c)}</option>)}
                 </select>
               </div>
@@ -676,6 +677,12 @@ export default function NewRound() {
               </div>
             </div>
           </section>
+        )}
+
+        {!courseId && courses.length > 0 && (
+          <div style={{ textAlign: 'center', fontSize: 13, color: '#7A2E2E', background: 'rgba(122,46,46,0.08)', border: '1px solid rgba(122,46,46,0.18)', borderRadius: 10, padding: '10px 14px' }}>
+            ⚠️ Debes seleccionar un campo para poder iniciar la partida.
+          </div>
         )}
 
         <button onClick={handleStart} disabled={!isValid() || saving} style={{
