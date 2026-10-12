@@ -13,6 +13,16 @@ import { Hole, RoundPlayer, Score } from './supabase'
 // cada vuelta (6 en total) en lugar de 3 en las 18. Esta función se aplica al
 // usar el campo en una partida (no al crearlo): el campo se sigue guardando con
 // ventajas 1–9 por vuelta.
+// Orden real de juego según el hoyo de salida (salidas simultáneas o por el 10):
+// con salida en el 5 en 18 hoyos → 5, 6 … 18, 1 … 4 (el 4 es el último).
+// Los cálculos de match ("faltan X", "3&2", estado hoyo a hoyo) deben recorrer
+// los hoyos en este orden; la tarjeta se sigue mostrando en orden 1–18.
+export function playOrder<T extends { hole_number: number }>(holes: T[], startHole: number = 1): T[] {
+  const idx = holes.findIndex(h => h.hole_number === startHole)
+  if (idx <= 0) return holes
+  return [...holes.slice(idx), ...holes.slice(0, idx)]
+}
+
 export function correctCombinedHandicaps(holes: Hole[]): Hole[] {
   // Solo aplica cuando se juegan 18 hoyos formados por dos vueltas 1–9.
   if (holes.length !== 18) return holes
@@ -163,7 +173,7 @@ export function calcMatchPlay(
   const abs = Math.abs(running)
   const holesRemaining = holes.length - (concludedAt ? holes.findIndex(h => h.hole_number === concludedAt) + 1 : holeResults.length)
   let status = 'All Square'
-  if (concluded && concludedAt) status = `${abs}&${holesRemaining}`
+  if (concluded && concludedAt) status = holesRemaining > 0 ? `${abs}&${holesRemaining}` : `${abs} UP`
   else if (abs > 0) status = `${abs} UP`
 
   return { holeResults, status, leaderId, concluded, concludedAt }
@@ -216,7 +226,7 @@ export function calcMatchPlayDobles(
   const leadingTeam = running > 0 ? 1 : running < 0 ? 2 : null
   const holesRemaining = holes.length - holeResults.length
   let status = 'All Square'
-  if (concluded) status = `${abs}&${holesRemaining}`
+  if (concluded) status = holesRemaining > 0 ? `${abs}&${holesRemaining}` : `${abs} UP`
   else if (abs > 0) status = `${abs} UP`
 
   return { holeResults, status, leadingTeam, concluded }

@@ -9,7 +9,7 @@ import CourseStats from '@/components/CourseStats'
 import {
   calcStroke, calcMatchPlay, calcMatchPlayDobles, calcBismarck,
   calcCombinado4, calcCombinadoBismarck, calcMejorPeorSuma, calcGrupalSide, getExtraStrokes, getRelativeExtra,
-  correctCombinedHandicaps, buildLoopRoundHoles
+  correctCombinedHandicaps, buildLoopRoundHoles, playOrder
 } from '@/lib/golf'
 
 const PLAYER_COLORS = ['#1B4332', '#B8935A', '#6B5B95', '#7A2E2E']
@@ -340,26 +340,28 @@ export default function RoundPage() {
   // Calculate results
   const r = round!
   const hcpPct = (r as any).hcp_pct ?? 100
-  const strokeResults = calcStroke(players, scores, holes, holes.length, hcpPct)
+  const startHole = (r as any).start_hole ?? 1
+  // Hoyos en orden de juego (desde el hoyo de salida) para todos los cálculos.
+  const playHoles = playOrder(holes, startHole)
+  const strokeResults = calcStroke(players, scores, playHoles, holes.length, hcpPct)
   const matchResult = r.mode === 'matchplay_individual' && players.length >= 2
-    ? calcMatchPlay(players[0], players[1], scores, holes, holes.length, hcpPct) : null
+    ? calcMatchPlay(players[0], players[1], scores, playHoles, holes.length, hcpPct) : null
   const doublesResult = r.mode === 'matchplay_dobles' && players.length === 4
-    ? calcMatchPlayDobles(players, scores, holes, holes.length, hcpPct) : null
+    ? calcMatchPlayDobles(players, scores, playHoles, holes.length, hcpPct) : null
   const mpsResult = r.mode === 'mejor_peor_suma' && players.length === 4
-    ? calcMejorPeorSuma(players, scores, holes, holes.length, hcpPct) : null
+    ? calcMejorPeorSuma(players, scores, playHoles, holes.length, hcpPct) : null
   const bismarckResult = r.mode === 'bismarck' && players.length === 3
-    ? calcBismarck(players, scores, holes, holes.length, hcpPct) : null
+    ? calcBismarck(players, scores, playHoles, holes.length, hcpPct) : null
   const combinado4Result = r.mode === 'combinado_4' && players.length === 4
-    ? calcCombinado4(players, scores, holes, holes.length, (r as any).dobles_mode || 'matchplay', (r as any).dobles_hcp_pct ?? 100, (r as any).individual_mode || 'matchplay', (r as any).individual_hcp_pct ?? 80) : null
+    ? calcCombinado4(players, scores, playHoles, holes.length, (r as any).dobles_mode || 'matchplay', (r as any).dobles_hcp_pct ?? 100, (r as any).individual_mode || 'matchplay', (r as any).individual_hcp_pct ?? 80) : null
   const combinadoBismarckResult = r.mode === 'combinado_bismarck' && players.length === 3
-    ? calcCombinadoBismarck(players, scores, holes, holes.length, (r as any).bismarck_hcp_pct ?? 100, (r as any).individual_mode || 'matchplay', (r as any).individual_hcp_pct ?? 80) : null
+    ? calcCombinadoBismarck(players, scores, playHoles, holes.length, (r as any).bismarck_hcp_pct ?? 100, (r as any).individual_mode || 'matchplay', (r as any).individual_hcp_pct ?? 80) : null
   const sideMatch = ((r as any).side_match ?? 'none') as 'none' | 'dobles' | 'singles'
   const grupalSide = r.mode === 'stroke_grupal' && sideMatch !== 'none'
-    ? calcGrupalSide(players, scores, holes, holes.length, sideMatch, (r as any).side_hcp_pct ?? 100) : null
+    ? calcGrupalSide(players, scores, playHoles, holes.length, sideMatch, (r as any).side_hcp_pct ?? 100) : null
 
   const front9 = holes.slice(0, 9)
   const back9 = holes.length > 9 ? holes.slice(9) : []
-  const startHole = (r as any).start_hole ?? 1
 
   // Estrategia de ventaja a mostrar en la vista Gross (círculo con palos recibidos,
   // sin ajustar el score). Solo se muestra para modos con un único % de handicap;
@@ -649,7 +651,7 @@ export default function RoundPage() {
             const allHcps = [p1.handicap, p2.handicap]
             let running = 0
             let concluded = false
-            return holes.map((h, i) => {
+            return playHoles.map((h, i) => {
               if (concluded) return null
               const s1 = getScore(p1.id, h.hole_number)
               const s2 = getScore(p2.id, h.hole_number)
@@ -681,7 +683,7 @@ export default function RoundPage() {
             }
             let running = 0
             let concluded = false
-            const perHole = holes.map((h, i) => {
+            const perHole = playHoles.map((h, i) => {
               const b1 = bestBall(team1Players, h)
               const b2 = bestBall(team2Players, h)
               let status: number | null = null
@@ -706,10 +708,10 @@ export default function RoundPage() {
           ) => {
             const lastInSet = (() => {
               // find the last non-null status that falls inside holeSet
+              // último estado (en orden de juego) dentro de este bloque de hoyos
               let v: number | null = null
-              holeSet.forEach(h => {
-                const idx = holes.findIndex(x => x.hole_number === h.hole_number)
-                if (idx >= 0 && statuses[idx] !== null) v = statuses[idx]
+              playHoles.forEach((h, idx) => {
+                if (holeSet.some(x => x.hole_number === h.hole_number) && statuses[idx] !== null) v = statuses[idx]
               })
               return v
             })()
@@ -727,7 +729,7 @@ export default function RoundPage() {
                   <span style={{ fontSize: 11, fontWeight: 700, color, letterSpacing: 1 }}>{label}</span>
                 </td>
                 {holeSet.map(h => {
-                  const idx = holes.findIndex(x => x.hole_number === h.hole_number)
+                  const idx = playHoles.findIndex(x => x.hole_number === h.hole_number)
                   const s = idx >= 0 ? statuses[idx] : null
                   return (
                     <td key={h.hole_number} style={{ padding: 3, border: '1px solid var(--border)', background: 'var(--surface2)', textAlign: 'center' }}>
