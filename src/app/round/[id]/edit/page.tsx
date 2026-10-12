@@ -67,6 +67,8 @@ export default function EditRound() {
   const [courseId, setCourseId] = useState('')
   const [mode, setMode] = useState<GameMode>('stroke')
   const [holesPlayed, setHolesPlayed] = useState(18)
+  const [startHole, setStartHole] = useState(1)
+  const [groupName, setGroupName] = useState('')
   const [date, setDate] = useState('')
   const [players, setPlayers] = useState<EditPlayer[]>([])
   const [hcpPct, setHcpPct] = useState(100)
@@ -87,16 +89,19 @@ export default function EditRound() {
     if (!id) return
     async function load() {
       const [{ data: c }, { data: r }, { data: p }] = await Promise.all([
-        supabase.from('courses').select('*, holes(*)').order('name'),
+        supabase.from('courses').select('*, holes(*)'),
         supabase.from('rounds').select('*').eq('id', id).single(),
         supabase.from('round_players').select('*').eq('round_id', id).order('position'),
       ])
       if (!r) { router.push('/'); return }
-      setCourses((c || []) as any)
+      const sortedCourses = [...((c || []) as any[])].sort((a, b) => (a.club || a.name).localeCompare(b.club || b.name, 'es'))
+      setCourses(sortedCourses as any)
       setRound(r as any)
       setCourseId((r as any).course_id)
       setMode((r as any).mode)
       setHolesPlayed((r as any).holes_played || 18)
+      setStartHole((r as any).start_hole ?? 1)
+      setGroupName((r as any).group_name || '')
       setDate((r as any).date)
       setHcpPct((r as any).hcp_pct ?? 100)
       setDoblesMode((r as any).dobles_mode || 'matchplay')
@@ -149,7 +154,7 @@ export default function EditRound() {
   const handleSave = async () => {
     if (!isValid() || saving) return
     setSaving(true)
-    const update: any = { course_id: courseId, holes_played: holesPlayed, date }
+    const update: any = { course_id: courseId, holes_played: holesPlayed, start_hole: startHole > holesPlayed ? 1 : startHole, group_name: groupName.trim() || null, date }
     if (['stroke', 'matchplay_individual', 'matchplay_dobles', 'bismarck', 'mejor_peor_suma', 'stroke_grupal'].includes(mode)) {
       update.hcp_pct = hcpPct
     }
@@ -208,8 +213,12 @@ export default function EditRound() {
             <div>
               <label style={{ fontSize: 11, color: 'var(--text3)', letterSpacing: 1, display: 'block', marginBottom: 6 }}>CAMPO</label>
               <select value={courseId} onChange={e => setCourseId(e.target.value)} style={{ ...inp, color: '#22301F' }}>
-                {courses.map(c => <option key={c.id} value={c.id} style={{ background: '#EDEAD8', color: '#22301F' }}>{c.name}{c.club ? ` — ${c.club}` : ''}</option>)}
+                {courses.map(c => <option key={c.id} value={c.id} style={{ background: '#EDEAD8', color: '#22301F' }}>{(c as any).club || c.name}{(c as any).loop_label ? ` · ${(c as any).loop_label}` : ''}</option>)}
               </select>
+            </div>
+            <div>
+              <label style={{ fontSize: 11, color: 'var(--text3)', letterSpacing: 1, display: 'block', marginBottom: 6 }}>NOMBRE DEL GRUPO (opcional)</label>
+              <input type="text" value={groupName} onChange={e => setGroupName(e.target.value)} placeholder="Ej: Cuarteto de Pedro, Grupo 2…" maxLength={40} style={inp} />
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
               <div style={{ flex: 1 }}>
@@ -229,6 +238,17 @@ export default function EditRound() {
                 <label style={{ fontSize: 11, color: 'var(--text3)', letterSpacing: 1, display: 'block', marginBottom: 6 }}>FECHA</label>
                 <input type="date" value={date} onChange={e => setDate(e.target.value)} style={inp} />
               </div>
+            </div>
+            <div>
+              <label style={{ fontSize: 11, color: 'var(--text3)', letterSpacing: 1, display: 'block', marginBottom: 6 }}>HOYO DE SALIDA</label>
+              <select value={startHole > holesPlayed ? 1 : startHole} onChange={e => setStartHole(parseInt(e.target.value))} style={{ ...inp, color: '#22301F', maxWidth: 140 }}>
+                {Array.from({ length: holesPlayed }, (_, i) => i + 1).map(n => (
+                  <option key={n} value={n} style={{ background: '#EDEAD8', color: '#22301F' }}>{n}</option>
+                ))}
+              </select>
+              <p style={{ fontSize: 12, color: 'var(--text3)', marginTop: 6, lineHeight: 1.4 }}>
+                Cambiarlo no borra ni mueve los scores ya anotados; solo marca el hoyo donde partió el grupo.
+              </p>
             </div>
           </div>
         </section>

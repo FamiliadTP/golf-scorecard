@@ -1,6 +1,6 @@
 'use client'
 export const dynamic = 'force-dynamic'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase, Round, RoundPlayer, Score, Hole, Course } from '@/lib/supabase'
@@ -25,21 +25,47 @@ const MODE_LABELS: Record<string, string> = {
 // Modes that use handicap (show Score Neto tab)
 const MODES_WITH_HCP = ['stroke', 'matchplay_individual', 'matchplay_dobles', 'bismarck', 'combinado_4', 'combinado_bismarck', 'stroke_grupal']
 
-function ScoreBadge({ strokes, par }: { strokes: number | null; par: number }) {
-  if (!strokes) return <span style={{ color: 'var(--text3)', fontSize: 13 }}>—</span>
-  const d = strokes - par
-  const styles: Record<string, React.CSSProperties> = {
-    eagle: { background: '#C9A227', color: '#F6ECDA', borderRadius: '50%' },
-    birdie: { background: '#1B4332', color: '#F1EEE4', borderRadius: 4 },
-    par: { background: 'var(--surface2)', color: 'var(--text)', border: '1px solid var(--border2)', borderRadius: 4 },
-    bogey: { background: 'rgba(122,46,46,0.1)', color: '#7A2E2E', border: '1px solid rgba(122,46,46,0.18)', borderRadius: 4 },
-    double: { background: 'rgba(122,46,46,0.18)', color: '#9C4A44', border: '2px solid #7A2E2E', borderRadius: 4 },
-    triple: { background: '#F3E2E0', color: '#9C4A44', borderRadius: 4 },
+// extra: palos de ventaja recibidos en ese hoyo (opcional). Cuando > 0 se muestra
+// un círculo superpuesto con el número de palos, sin alterar el score mostrado
+// (el ajuste real solo ocurre en la vista Neto).
+function ScoreBadge({ strokes, par, extra }: { strokes: number | null; par: number; extra?: number }) {
+  if (!strokes) {
+    return (
+      <span style={{ position: 'relative', display: 'inline-flex', width: 26, height: 26, alignItems: 'center', justifyContent: 'center' }}>
+        <span style={{ color: 'var(--text3)', fontSize: 13 }}>—</span>
+        {!!extra && extra > 0 && (
+          <span style={{ position: 'absolute', top: -5, right: -5, width: 10, height: 10, background: '#1B4332', borderRadius: '50%', fontSize: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#F1EEE4', fontWeight: 900, zIndex: 3 }}>{extra}</span>
+        )}
+      </span>
+    )
   }
-  const k = d <= -2 ? 'eagle' : d === -1 ? 'birdie' : d === 0 ? 'par' : d === 1 ? 'bogey' : d === 2 ? 'double' : 'triple'
+  const d = strokes - par
+  const isAce = strokes === 1
+
+  type K = 'ace' | 'eagle' | 'birdie' | 'par' | 'bogey' | 'doble' | 'peor'
+  const styles: Record<K, React.CSSProperties> = {
+    ace: { background: '#C9A227', color: '#F6ECDA', borderRadius: '50%', border: 'none' },
+    eagle: { background: '#F5D54A', color: '#5C4300', borderRadius: '50%', border: 'none' },
+    birdie: { background: '#1B4332', color: '#F1EEE4', borderRadius: 4, border: 'none' },
+    par: { background: '#FFFFFF', color: 'var(--text)', border: '1px solid var(--border2)', borderRadius: 4 },
+    bogey: { background: 'rgba(122,46,46,0.1)', color: '#7A2E2E', border: '1px solid rgba(122,46,46,0.18)', borderRadius: 4 },
+    doble: { background: 'rgba(122,46,46,0.18)', color: '#9C4A44', border: '1px solid #7A2E2E', borderRadius: 4 },
+    peor: { background: '#F3E2E0', color: '#7A2E2E', border: '1px solid #7A2E2E', borderRadius: 4 },
+  }
+  const k: K = isAce ? 'ace' : d <= -2 ? 'eagle' : d === -1 ? 'birdie' : d === 0 ? 'par' : d === 1 ? 'bogey' : d === 2 ? 'doble' : 'peor'
+  const doublePerimeter = k === 'peor' // +3 o peor sobre par, cualquiera sea la magnitud
+
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 26, height: 26, fontSize: 12, fontWeight: 700, ...styles[k] }}>
-      {strokes}
+    <span style={{ position: 'relative', display: 'inline-flex', width: 26, height: 26 }}>
+      {doublePerimeter && (
+        <span style={{ position: 'absolute', inset: -4, border: '1.5px solid #7A2E2E', borderRadius: 6, pointerEvents: 'none' }} />
+      )}
+      <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 26, height: 26, fontSize: 12, fontWeight: 700, boxSizing: 'border-box', ...styles[k] }}>
+        {strokes}
+      </span>
+      {!!extra && extra > 0 && (
+        <span style={{ position: 'absolute', top: -5, right: -5, width: 10, height: 10, background: '#1B4332', borderRadius: '50%', fontSize: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#F1EEE4', fontWeight: 900, zIndex: 3 }}>{extra}</span>
+      )}
     </span>
   )
 }
@@ -136,7 +162,6 @@ export default function RoundPage() {
   const [openMatches, setOpenMatches] = useState<Record<string, boolean>>({})
   const toggleMatch = (k: string) => setOpenMatches(m => ({ ...m, [k]: !m[k] }))
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [deleteCode, setDeleteCode] = useState<string | null>(null)
   const [deleteInput, setDeleteInput] = useState('')
@@ -169,25 +194,121 @@ export default function RoundPage() {
     load()
   }, [id])
 
+  // Al abrir la tarjeta, llevar la vista (scroll horizontal + vertical) hasta la
+  // columna del hoyo de salida, para que quien anota parta directamente ahí.
+  useEffect(() => {
+    if (loading || activeTab !== 'card') return
+    const t = setTimeout(() => {
+      document.getElementById('start-hole-col')?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
+    }, 150)
+    return () => clearTimeout(t)
+  }, [loading, activeTab])
+
   const getScore = useCallback((playerId: string, hole: number) =>
     scores.find(s => s.player_id === playerId && s.hole_number === hole)?.strokes ?? null, [scores])
 
-  const handleScoreChange = async (playerId: string, holeNumber: number, val: string) => {
+  // ── Guardado y sincronización de scores ──
+  // Cada celda se guarda con un pequeño retardo (para que "1" y luego "10" no
+  // lleguen desordenados a la base) y una sola escritura a la vez por celda.
+  const pendingRef = useRef<Record<string, { playerId: string; hole: number; strokes: number | null }>>({})
+  const timersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
+  const inFlightRef = useRef(0)
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const reloadScores = useCallback(async () => {
+    if (!id) return
+    // No pisar lo que se está escribiendo/guardando en este teléfono.
+    if (inFlightRef.current > 0 || Object.keys(pendingRef.current).length > 0) return
+    const { data, error } = await supabase.from('scores').select('*').eq('round_id', id)
+    if (error || !data) return
+    if (inFlightRef.current > 0 || Object.keys(pendingRef.current).length > 0) return
+    setScores(prev => {
+      const next = data as any as Score[]
+      const same = prev.length === next.length && next.every(n => prev.some(p => p.player_id === n.player_id && p.hole_number === n.hole_number && p.strokes === n.strokes))
+      return same ? prev : next
+    })
+  }, [id])
+
+  const flushCell = useCallback(async (key: string) => {
+    const job = pendingRef.current[key]
+    if (!job) return
+    delete pendingRef.current[key]
+    inFlightRef.current++
+    setSyncStatus('saving')
+    const { error } = job.strokes === null
+      ? await supabase.from('scores').delete().eq('round_id', id).eq('player_id', job.playerId).eq('hole_number', job.hole)
+      : await supabase.from('scores').upsert({ round_id: id, player_id: job.playerId, hole_number: job.hole, strokes: job.strokes }, { onConflict: 'round_id,player_id,hole_number' })
+    inFlightRef.current--
+    if (error) {
+      // Volver a encolar para reintentar.
+      if (!pendingRef.current[key]) pendingRef.current[key] = job
+      setSyncStatus('error')
+      return
+    }
+    if (inFlightRef.current === 0 && Object.keys(pendingRef.current).length === 0) {
+      setSyncStatus('saved')
+      if (savedTimerRef.current) clearTimeout(savedTimerRef.current)
+      savedTimerRef.current = setTimeout(() => setSyncStatus(st => st === 'saved' ? 'idle' : st), 1800)
+    }
+  }, [id])
+
+  const retryPending = useCallback(() => {
+    Object.keys(pendingRef.current).forEach(k => flushCell(k))
+  }, [flushCell])
+
+  const handleScoreChange = (playerId: string, holeNumber: number, val: string) => {
     const strokes = val === '' ? null : Math.max(1, parseInt(val) || 1)
     const key = `${playerId}-${holeNumber}`
-    setSaving(key)
+    // Actualización inmediata en pantalla: totales y resultados se recalculan al tiro.
     setScores(prev => {
       const filtered = prev.filter(s => !(s.player_id === playerId && s.hole_number === holeNumber))
       if (strokes === null) return filtered
       return [...filtered, { round_id: id, player_id: playerId, hole_number: holeNumber, strokes }]
     })
-    if (strokes === null) {
-      await supabase.from('scores').delete().eq('round_id', id).eq('player_id', playerId).eq('hole_number', holeNumber)
-    } else {
-      await supabase.from('scores').upsert({ round_id: id, player_id: playerId, hole_number: holeNumber, strokes }, { onConflict: 'round_id,player_id,hole_number' })
-    }
-    setSaving(null)
+    pendingRef.current[key] = { playerId, hole: holeNumber, strokes }
+    setSyncStatus('saving')
+    if (timersRef.current[key]) clearTimeout(timersRef.current[key])
+    timersRef.current[key] = setTimeout(() => {
+      delete timersRef.current[key]
+      if (inFlightRef.current > 0) {
+        // Esperar a que termine la escritura anterior antes de mandar la nueva.
+        const wait = setInterval(() => { if (inFlightRef.current === 0) { clearInterval(wait); flushCell(key) } }, 150)
+      } else flushCell(key)
+    }, 450)
   }
+
+  // Sincronizar con lo anotado en otros teléfonos: tiempo real + respaldo cada
+  // 15 s + al volver a la app (pantalla bloqueada entre hoyos).
+  useEffect(() => {
+    if (!id) return
+    let debounce: ReturnType<typeof setTimeout> | null = null
+    const schedule = () => { if (debounce) clearTimeout(debounce); debounce = setTimeout(reloadScores, 300) }
+    let channel: any = null
+    try {
+      channel = supabase.channel(`scores-${id}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'scores', filter: `round_id=eq.${id}` }, schedule)
+        .subscribe()
+    } catch { channel = null }
+    const poll = setInterval(() => { if (document.visibilityState === 'visible') reloadScores() }, 15000)
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        if (Object.keys(pendingRef.current).length > 0) retryPending()
+        reloadScores()
+      }
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('focus', onVisible)
+    window.addEventListener('online', retryPending)
+    return () => {
+      if (debounce) clearTimeout(debounce)
+      clearInterval(poll)
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('focus', onVisible)
+      window.removeEventListener('online', retryPending)
+      if (channel) { try { supabase.removeChannel(channel) } catch {} }
+    }
+  }, [id, reloadScores, retryPending])
 
   const initiateDelete = () => {
     const code = Math.floor(1000 + Math.random() * 9000).toString()
@@ -238,6 +359,17 @@ export default function RoundPage() {
 
   const front9 = holes.slice(0, 9)
   const back9 = holes.length > 9 ? holes.slice(9) : []
+  const startHole = (r as any).start_hole ?? 1
+
+  // Estrategia de ventaja a mostrar en la vista Gross (círculo con palos recibidos,
+  // sin ajustar el score). Solo se muestra para modos con un único % de handicap;
+  // Ryder y Bismarck+Individuales tienen varias apuestas con % distintos, así que
+  // su indicación de ventaja vive solo en sus tablas Neto respectivas.
+  const grossHcpStrategy: 'individual' | 'relative' | null =
+    r.mode === 'stroke' || r.mode === 'stroke_grupal' ? 'individual'
+    : ['matchplay_individual', 'matchplay_dobles', 'bismarck', 'mejor_peor_suma'].includes(r.mode) ? 'relative'
+    : null
+  const allHcpsGross = players.map(p => p.handicap)
 
   // Puntos Ryder: dobles vale 2, cada individual 1 (6 en total). Empate parte el valor.
   const ryderPoints = (() => {
@@ -296,18 +428,20 @@ export default function RoundPage() {
         <div style={{ maxWidth: 800, margin: '0 auto' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
             <div>
-              <h1 style={{ fontFamily: 'var(--display)', fontSize: 22, letterSpacing: 1, lineHeight: 1 }}>{course?.name}{secondCourse ? (
+              <h1 style={{ fontFamily: 'var(--display)', fontSize: 22, letterSpacing: 1, lineHeight: 1 }}>{(r as any).group_name || course?.club || course?.name}{secondCourse ? (
                 <span style={{ fontSize: 14, color: 'var(--text3)', display: 'block', marginTop: 4, letterSpacing: 0 }}>
                   {course?.loop_label || 'Vuelta 1'} + {secondCourse?.loop_label || 'Vuelta 2'}
                 </span>
               ) : (course?.loop_label ? (
                 <span style={{ fontSize: 14, color: 'var(--text3)', display: 'block', marginTop: 4, letterSpacing: 0 }}>{course.loop_label}</span>
               ) : null)}</h1>
+              {(r as any).group_name && (
+                <div style={{ fontSize: 13, color: 'var(--text3)', marginTop: 2 }}>{course?.club || course?.name || 'Campo desconocido'}</div>
+              )}
               <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>
-                {new Date(r.date).toLocaleDateString('es-CL', { day: 'numeric', month: 'long' })} · {holes.length} hoyos · {MODE_LABELS[r.mode]}
+                {new Date(r.date + 'T00:00:00').toLocaleDateString('es-CL', { day: 'numeric', month: 'long' })} · {holes.length} hoyos · {MODE_LABELS[r.mode]}{startHole !== 1 ? ` · Salida hoyo ${startHole}` : ''}
               </div>
             </div>
-            {saving && <div style={{ marginLeft: 'auto', fontSize: 11, color: '#1B4332' }}>💾</div>}
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, flexShrink: 0 }}>
               {r.mode === 'stroke_grupal' && (r as any).grupal && (
                 <Link href={`/leaderboard/${id}`} style={{
@@ -346,17 +480,41 @@ export default function RoundPage() {
         </div>
       </header>
 
-      {/* TABS */}
-      <div style={{ borderBottom: '1px solid var(--border)', padding: '0 16px', display: 'flex', gap: 2 }}>
-        {tabs.map(t => (
-          <button key={t.key} onClick={() => setActiveTab(t.key)} style={{
-            padding: '10px 16px', background: 'transparent', border: 'none',
-            borderBottom: `2px solid ${activeTab === t.key ? '#1B4332' : 'transparent'}`,
-            color: activeTab === t.key ? '#1B4332' : 'var(--text3)',
-            fontFamily: 'var(--body)', fontSize: 13, fontWeight: 500, cursor: 'pointer'
-          }}>{t.label}</button>
-        ))}
+      {/* TABS — control segmentado, fijo arriba al hacer scroll */}
+      <div style={{ position: 'sticky', top: 0, zIndex: 20, background: 'var(--bg)', borderBottom: '1px solid var(--border)', padding: '10px 12px', boxShadow: '0 2px 6px rgba(27,42,26,0.05)' }}>
+        <div role="tablist" style={{ maxWidth: 800, margin: '0 auto', display: 'flex', gap: 4, padding: 4, background: '#E6E1D2', borderRadius: 12, border: '1px solid var(--border)' }}>
+          {tabs.map(t => {
+            const active = activeTab === t.key
+            return (
+              <button key={t.key} role="tab" aria-selected={active} onClick={() => setActiveTab(t.key)} style={{
+                flex: 1, minWidth: 0, padding: '9px 4px', borderRadius: 9, cursor: 'pointer',
+                border: active ? '1px solid #1B4332' : '1px solid transparent',
+                background: active ? '#1B4332' : 'transparent',
+                color: active ? '#F7F5EF' : '#4A5A47',
+                boxShadow: active ? '0 2px 6px rgba(27,67,50,0.28)' : 'none',
+                fontFamily: 'var(--body)', fontSize: 13, fontWeight: active ? 700 : 600,
+                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                transition: 'background 0.15s, color 0.15s',
+              }}>{t.label}</button>
+            )
+          })}
+        </div>
       </div>
+
+      {/* Estado de guardado */}
+      {syncStatus !== 'idle' && (
+        <div onClick={syncStatus === 'error' ? retryPending : undefined} style={{
+          position: 'fixed', left: '50%', bottom: 'calc(18px + env(safe-area-inset-bottom))', transform: 'translateX(-50%)', zIndex: 50,
+          padding: '8px 16px', borderRadius: 20, fontSize: 13, fontWeight: 600, fontFamily: 'var(--body)',
+          boxShadow: '0 4px 14px rgba(0,0,0,0.18)', whiteSpace: 'nowrap',
+          cursor: syncStatus === 'error' ? 'pointer' : 'default',
+          background: syncStatus === 'error' ? '#7A2E2E' : syncStatus === 'saved' ? '#1B4332' : '#F7F5EF',
+          color: syncStatus === 'saving' ? '#1B4332' : '#F7F5EF',
+          border: syncStatus === 'saving' ? '1px solid #B8935A' : 'none',
+        }}>
+          {syncStatus === 'saving' ? 'Guardando…' : syncStatus === 'saved' ? '✓ Guardado' : '⚠ No se guardó · tocar para reintentar'}
+        </div>
+      )}
 
       <main style={{ maxWidth: 800, margin: '0 auto', padding: '16px 12px' }}>
 
@@ -376,12 +534,21 @@ export default function RoundPage() {
                     <thead>
                       <tr>
                         <th style={{ textAlign: 'left', padding: '8px 10px', fontSize: 11, color: 'var(--text3)', letterSpacing: 1, background: 'var(--surface2)', border: '1px solid var(--border)', minWidth: 100 }}>JUGADOR</th>
-                        {holeSet.map(h => (
-                          <th key={h.hole_number} style={{ width: 42, padding: '6px 4px', fontSize: 12, color: 'var(--text3)', background: 'var(--surface2)', border: '1px solid var(--border)' }}>
+                        {holeSet.map(h => {
+                          const isStart = h.hole_number === startHole
+                          return (
+                          <th key={h.hole_number} id={isStart ? 'start-hole-col' : undefined} style={{
+                            width: 42, padding: '6px 4px', fontSize: 12, color: 'var(--text3)',
+                            background: isStart ? 'rgba(184,147,90,0.16)' : 'var(--surface2)',
+                            border: isStart ? '1px solid #B8935A' : '1px solid var(--border)',
+                            borderBottom: isStart ? '3px solid #B8935A' : undefined,
+                          }}>
                             <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text2)' }}>{h.hole_number}</div>
                             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text3)' }}>P{h.par}</div><div style={{ fontSize: 11, fontWeight: 700, color: '#1B4332' }}>V{h.handicap}</div>
+                            {isStart && <div style={{ fontSize: 9, fontWeight: 700, color: '#B8935A', letterSpacing: 0.5, marginTop: 1 }}>SALIDA</div>}
                           </th>
-                        ))}
+                          )
+                        })}
                         <th style={{ width: 52, padding: '6px 8px', fontSize: 11, color: '#1B4332', background: 'var(--surface2)', border: '1px solid var(--border)' }}>
                           {setLabel}
                         </th>
@@ -406,11 +573,16 @@ export default function RoundPage() {
                             </td>
                             {holeSet.map(h => {
                               const s = getScore(p.id, h.hole_number)
+                              const extra = grossHcpStrategy === 'individual'
+                                ? getExtraStrokes(h.handicap, p.handicap, holes.length, hcpPct)
+                                : grossHcpStrategy === 'relative'
+                                ? getRelativeExtra(h.handicap, p.handicap, allHcpsGross, holes.length, hcpPct)
+                                : 0
                               return (
                                 <td key={h.hole_number} style={{ padding: 3, border: '1px solid var(--border)', background: 'var(--surface)', textAlign: 'center' }}>
                                   <div style={{ position: 'relative', width: 34, margin: '0 auto' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 30 }}>
-                                      <ScoreBadge strokes={s} par={h.par} />
+                                      <ScoreBadge strokes={s} par={h.par} extra={extra} />
                                     </div>
                                     <input type="number" min="1" max="15" value={s || ''} onChange={e => handleScoreChange(p.id, h.hole_number, e.target.value)}
                                       style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: 'transparent', border: 'none', color: 'transparent', textAlign: 'center', fontSize: 13, cursor: 'pointer', outline: 'none', zIndex: 2, MozAppearance: 'textfield' as any }} />
@@ -437,15 +609,29 @@ export default function RoundPage() {
             })}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, paddingTop: 8 }}>
               {[
-                { label: 'Eagle', bg: '#C9A227', r: '50%' }, { label: 'Birdie', bg: '#1B4332', r: 4 },
-                { label: 'Par', bg: 'var(--surface2)', border: '1px solid var(--border2)' },
+                { label: 'Hoyo en 1', bg: '#C9A227', r: '50%' },
+                { label: 'Eagle o mejor', bg: '#F5D54A', r: '50%' },
+                { label: 'Birdie', bg: '#1B4332', r: 4 },
+                { label: 'Par', bg: '#FFFFFF', border: '1px solid var(--border2)' },
                 { label: 'Bogey', bg: 'rgba(122,46,46,0.1)', border: '1px solid rgba(122,46,46,0.18)' },
+                { label: 'Doble bogey', bg: 'rgba(122,46,46,0.18)', border: '1px solid #7A2E2E' },
+                { label: '+3 o peor', bg: '#F3E2E0', border: '1px solid #7A2E2E', double: true },
               ].map((l: any) => (
                 <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'var(--text3)' }}>
-                  <div style={{ width: 14, height: 14, background: l.bg, borderRadius: l.r || 3, border: l.border }} />
+                  <span style={{ position: 'relative', width: 14, height: 14, display: 'inline-flex' }}>
+                    {l.double && <span style={{ position: 'absolute', inset: -3, border: '1.5px solid #7A2E2E', borderRadius: 5 }} />}
+                    <span style={{ width: 14, height: 14, background: l.bg, borderRadius: l.r || 3, border: l.border }} />
+                  </span>
                   {l.label}
                 </div>
               ))}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'var(--text3)' }}>
+                <span style={{ position: 'relative', width: 14, height: 14, display: 'inline-flex' }}>
+                  <span style={{ width: 14, height: 14, background: 'var(--surface2)', borderRadius: 3, border: '1px solid var(--border)' }} />
+                  <span style={{ position: 'absolute', top: -3, right: -3, width: 8, height: 8, background: '#1B4332', borderRadius: '50%' }} />
+                </span>
+                Recibe palo(s) de ventaja
+              </div>
             </div>
           </>
         )}
@@ -648,7 +834,10 @@ export default function RoundPage() {
                                             {extra > 0 && <span style={{ position: 'absolute', top: -4, right: -4, width: 10, height: 10, background: '#1B4332', borderRadius: '50%', fontSize: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#F1EEE4', fontWeight: 900 }}>{extra}</span>}
                                           </div>
                                         ) : (
-                                          <span style={{ color: 'var(--text3)', fontSize: 13 }}>—</span>
+                                          <span style={{ position: 'relative', display: 'inline-flex', width: 26, height: 26, alignItems: 'center', justifyContent: 'center' }}>
+                                            <span style={{ color: 'var(--text3)', fontSize: 13 }}>—</span>
+                                            {extra > 0 && <span style={{ position: 'absolute', top: -5, right: -5, width: 10, height: 10, background: '#1B4332', borderRadius: '50%', fontSize: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#F1EEE4', fontWeight: 900 }}>{extra}</span>}
+                                          </span>
                                         )}
                                       </td>
                                     )
